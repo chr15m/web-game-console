@@ -17,14 +17,17 @@ echo "Ensuring xorg is installed..."
 ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y xorg"
 
 echo "Installing Mali driver..."
-scp $SSH_OPTS "$SCRIPT_DIR/driver/mali_drv.so" ark@$HOST:/tmp/
-scp $SSH_OPTS "$SCRIPT_DIR/driver/99-mali.conf" ark@$HOST:/tmp/
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/driver/mali_drv.so" ark@$HOST:/tmp/
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/driver/99-mali.conf" ark@$HOST:/tmp/
 ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/mali_drv.so /usr/lib/xorg/modules/drivers/ && \
     sudo mkdir -p /etc/X11/xorg.conf.d && \
     sudo cp /tmp/99-mali.conf /etc/X11/xorg.conf.d/ && \
     sudo cp /tmp/99-mali.conf /usr/share/X11/xorg.conf.d/"
 
-echo "Installing Chromium..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y chromium-browser"
+echo "Installing surf browser..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y surf"
+
+echo "Copying index.html..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/index.html" ark@$HOST:/home/ark/
 
 echo "Done."
