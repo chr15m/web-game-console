@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+DEVICE="/dev/mmcblk0"
+OUTPUT="./sdcard_backup_$(date +%Y%m%d_%H%M%S).img.gz"
+
+echo "Unmounting partitions..."
+sudo umount /media/chrism/BOOT 2>/dev/null || true
+sudo umount /media/chrism/EASYROMS 2>/dev/null || true
+sudo umount /media/chrism/root 2>/dev/null || true
+
+echo "Backing up $DEVICE to $OUTPUT..."
+sudo dd if="$DEVICE" bs=4M status=progress | gzip > "$OUTPUT"
+
+echo "Backup complete: $OUTPUT"

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <backup.img.gz> [device]"
+    echo "Example: $0 sdcard_backup_20251128_191156.img.gz /dev/sdb"
+    exit 1
+fi
+
+IMAGE="$1"
+DEVICE="${2:-/dev/sdb}"
+
+if [ ! -f "$IMAGE" ]; then
+    echo "Error: Image file '$IMAGE' not found"
+    exit 1
+fi
+
+echo "WARNING: This will ERASE ALL DATA on $DEVICE"
+echo "Device: $DEVICE"
+echo "Image: $IMAGE"
+read -p "Are you sure? (yes/no): " CONFIRM
+
+if [ "$CONFIRM" != "yes" ]; then
+    echo "Aborted."
+    exit 1
+fi
+
+echo "Unmounting any partitions on $DEVICE..."
+sudo umount ${DEVICE}* 2>/dev/null || true
+
+echo "Writing $IMAGE to $DEVICE..."
+gunzip -c "$IMAGE" | sudo dd of="$DEVICE" bs=4M status=progress
+
+sync
+
+echo "Restore complete."
