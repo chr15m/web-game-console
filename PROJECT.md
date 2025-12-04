@@ -37,6 +37,7 @@ The goal is to run a web browser on Xorg to deliver games via Nostr feeds.
 ### Key Files
 
 - `setup.sh` - Idempotent setup script run from local machine
+- `launch.sh` - Stops GDM, sets tty permissions, kills emulationstation, starts X
 - `xinitrc` - X startup script (copied to `~/.xinitrc` on device)
 - `driver/mali_drv.so` - Mali GPU driver for Xorg
 - `driver/99-mali.conf` - Xorg configuration for Mali GPU
@@ -65,22 +66,16 @@ Note: Hardware acceleration is currently disabled (`AccelMethod "none"`).
 
 Key processes running on the device:
 
-- **emulationstation** (PID varies) - Main ArkOS frontend, uses ~46% memory and ~65% CPU
-- **pulseaudio** - Audio daemon (runs for both `ark` and `gdm` users)
-- **gdm3** - Display manager
+- **emulationstation** (PID varies) - Main ArkOS frontend, uses ~35% memory
+- **pulseaudio** - Audio daemon
+- **gdm3** - Display manager (disabled, but still runs until stopped)
 - **filebrowser** - Web file manager on port 80
 - **sshd** - SSH server
 - **smbd/nmbd** - Samba file sharing
 - **NetworkManager** - Network management
 - **bluetoothd** - Bluetooth daemon
 
-**Important**: EmulationStation must be killed before running X experiments, as it holds the display:
-
-```bash
-ssh ark@${IP} "pkill emulationstation"
-# or kill by PID:
-ssh ark@${IP} "kill <pid>"
-```
+**Important**: EmulationStation must be killed before running X experiments, as it holds the display. The `launch.sh` script handles this automatically.
 
 ## Setup Process
 
@@ -111,11 +106,17 @@ Uses SSH connection multiplexing to avoid multiple password prompts.
 
 ## Running the Browser
 
-Simply run `startx` as the `ark` user:
+Use the launch script:
 
 ```bash
-ssh ark@${IP} "startx"
+./launch.sh <device-ip>
 ```
+
+The script:
+1. Stops gdm3 service
+2. Sets tty permissions (`chmod 666 /dev/tty0 /dev/tty2`)
+3. Kills emulationstation
+4. Runs `startx`
 
 The `~/.xinitrc` will:
 1. Start `unclutter` to hide the mouse cursor
@@ -123,6 +124,18 @@ The `~/.xinitrc` will:
 3. Launch `surf` in fullscreen mode with `/home/ark/index.html`
 
 ## Updates
+
+- **2025-12-04**: Created launch.sh script
+  - Stops gdm3 to free memory and prevent conflicts
+  - Sets tty permissions (required after each reboot)
+  - Kills emulationstation before starting X
+  - Single command to launch the browser kiosk
+
+- **2025-12-04**: Disabled GDM3 display manager
+  - GDM was running a full GNOME greeter session on tty1 with its own Xorg
+  - This wasted ~60MB RAM from Xorg plus ~15 gsd-* daemon processes
+  - Disabled with `systemctl disable gdm3`
+  - EmulationStation now starts directly without the GDM overhead
 
 - **2025-12-04**: Kiosk setup complete
   - Installed matchbox-window-manager for proper fullscreen handling
@@ -167,6 +180,7 @@ The `~/.xinitrc` will:
 
 - X server uses modeset driver, not Mali driver (need to investigate)
 - Hardware acceleration disabled in Mali config
+- TTY permissions reset on reboot (launch.sh handles this)
 
 ## Debugging Black Bar Issue (Resolved)
 
@@ -207,6 +221,7 @@ ssh ark@${IP} "DISPLAY=:0 xwininfo -id <window-id>"
 
 ## Next Steps
 
+- Set up joystick-to-keyboard mapping (joy2key or similar) for game controls
 - Set up Nostr game feed integration
 - Create auto-start mechanism for X + browser
 - Investigate Mali hardware acceleration
