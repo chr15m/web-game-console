@@ -33,6 +33,12 @@ ssh $SSH_OPTS ark@$HOST "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 ssh $SSH_OPTS ark@$HOST "grep -qF '$PUBKEY' ~/.ssh/authorized_keys 2>/dev/null || echo '$PUBKEY' >> ~/.ssh/authorized_keys"
 ssh $SSH_OPTS ark@$HOST "chmod 600 ~/.ssh/authorized_keys"
 
+echo "Adding ark user to tty, video, and input groups..."
+ssh $SSH_OPTS ark@$HOST "sudo usermod -a -G tty,video,input ark"
+
+echo "Setting tty permissions for X..."
+ssh $SSH_OPTS ark@$HOST "sudo chmod 666 /dev/tty0 /dev/tty2"
+
 echo "Checking apt cache age..."
 APT_UPDATE_NEEDED=$(ssh $SSH_OPTS ark@$HOST '
     cache=/var/cache/apt/pkgcache.bin
@@ -66,10 +72,22 @@ ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/mali_drv.so /usr/lib/xorg/modules/drivers/
     sudo cp /tmp/99-mali.conf /etc/X11/xorg.conf.d/ && \
     sudo cp /tmp/99-mali.conf /usr/share/X11/xorg.conf.d/"
 
+echo "Configuring Xwrapper to allow non-root users..."
+ssh $SSH_OPTS ark@$HOST "echo 'allowed_users=anybody' | sudo tee /etc/X11/Xwrapper.config > /dev/null"
+
 echo "Installing surf browser..."
 ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y surf"
 
+echo "Installing matchbox window manager..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y matchbox-window-manager"
+
+echo "Installing unclutter..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y unclutter"
+
 echo "Copying index.html..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/index.html" ark@$HOST:/home/ark/
+
+echo "Copying xinitrc..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/xinitrc" ark@$HOST:/home/ark/.xinitrc
 
 echo "Done."
