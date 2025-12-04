@@ -84,13 +84,19 @@ ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y matchbox-window-manager"
 echo "Installing unclutter..."
 ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y unclutter"
 
+echo "Installing xdotool..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y xdotool"
+
 echo "Copying index.html..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/index.html" ark@$HOST:/home/ark/
 
 echo "Copying xinitrc..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/xinitrc" ark@$HOST:/home/ark/.xinitrc
 
-echo "Copying xinitrc..."
+echo "Copying launch.sh..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/launch.sh" ark@$HOST:/home/ark/
+
+echo "Copying joy-keys-hack.sh..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/joy-keys-hack.sh" ark@$HOST:/home/ark/
 
 echo "Done."
