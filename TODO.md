@@ -1,4 +1,7 @@
 - [ ] Automate extraction of `R36S-Xorg/XFCE/files/driver` or use a git submodul
-- [x] Get SSH authorized_keys working
 - [ ] Get it booting into surf instead of emustation
 - [ ] Fix the bug where there's a black bar at the bottom of the Xorg screen
+
+# Done
+
+- [x] Get SSH authorized_keys working
