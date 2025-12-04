@@ -62,6 +62,60 @@ EndSection
 
 Note: Hardware acceleration is currently disabled (`AccelMethod "none"`).
 
+### Input Devices
+
+The R36S has the following input devices:
+
+| Device | Name | Description |
+|--------|------|-------------|
+| `/dev/input/event0` | rk8xx_pwrkey | Power button |
+| `/dev/input/event1` | rockchip,rk817-codec Headphones | Headphone jack detection |
+| `/dev/input/event2` | GO-Super Gamepad | Main gamepad (buttons + analog sticks) |
+| `/dev/input/event3` | odroidgo3-keys | Additional keys |
+
+#### GO-Super Gamepad Details
+
+- **Device**: `/dev/input/event2`
+- **Bus**: 0x19, Vendor: 0x484b, Product: 0x1100, Version: 0x100
+
+**Buttons (EV_KEY):**
+
+| Code | Name | Physical |
+|------|------|----------|
+| 304 | BTN_SOUTH | A button |
+| 305 | BTN_EAST | B button |
+| 307 | BTN_NORTH | X button |
+| 308 | BTN_WEST | Y button |
+| 310 | BTN_TL | Left shoulder (L1) |
+| 311 | BTN_TR | Right shoulder (R1) |
+| 312 | BTN_TL2 | Left trigger (L2) |
+| 313 | BTN_TR2 | Right trigger (R2) |
+| 544 | BTN_DPAD_UP | D-pad up |
+| 545 | BTN_DPAD_DOWN | D-pad down |
+| 546 | BTN_DPAD_LEFT | D-pad left |
+| 547 | BTN_DPAD_RIGHT | D-pad right |
+| 704-708 | BTN_TRIGGER_HAPPY1-5 | Select, Start, etc. |
+
+**Analog Axes (EV_ABS):**
+
+| Code | Name | Range | Description |
+|------|------|-------|-------------|
+| 0 | ABS_X | -1800 to 1800 | Left stick horizontal |
+| 1 | ABS_Y | -1800 to 1800 | Left stick vertical |
+| 3 | ABS_RX | -1800 to 1800 | Right stick horizontal |
+| 4 | ABS_RY | -1800 to 1800 | Right stick vertical |
+
+**Other:**
+- Supports force feedback (FF_RUMBLE)
+
+#### Testing Input
+
+Use `evtest` to monitor input events:
+
+```bash
+ssh ark@$HOST "evtest /dev/input/event2"
+```
+
 ### Background Processes
 
 Key processes running on the device:
