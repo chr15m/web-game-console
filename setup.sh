@@ -90,4 +90,7 @@ rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/index.html" ark@$HOST:/home/ark
 echo "Copying xinitrc..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/xinitrc" ark@$HOST:/home/ark/.xinitrc
 
+echo "Copying xinitrc..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/launch.sh" ark@$HOST:/home/ark/
+
 echo "Done."
