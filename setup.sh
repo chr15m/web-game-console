@@ -25,6 +25,9 @@ if [ -z "$PUBKEY" ]; then
     exit 1
 fi
 
+echo "Connecting via SSH..."
+ssh $SSH_OPTS ark@$HOST "echo 'Connected.'"
+
 echo "Setting up SSH authorized_keys..."
 ssh $SSH_OPTS ark@$HOST "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 ssh $SSH_OPTS ark@$HOST "grep -qF '$PUBKEY' ~/.ssh/authorized_keys 2>/dev/null || echo '$PUBKEY' >> ~/.ssh/authorized_keys"
