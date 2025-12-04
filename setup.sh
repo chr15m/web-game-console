@@ -10,6 +10,26 @@ HOST="$1"
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersist=60"
 
+# Find available SSH public key
+PUBKEY=""
+for keyfile in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
+    if [ -f "$keyfile" ]; then
+        PUBKEY=$(cat "$keyfile")
+        echo "Using SSH key: $keyfile"
+        break
+    fi
+done
+
+if [ -z "$PUBKEY" ]; then
+    echo "No SSH public key found in ~/.ssh/"
+    exit 1
+fi
+
+echo "Setting up SSH authorized_keys..."
+ssh $SSH_OPTS ark@$HOST "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+ssh $SSH_OPTS ark@$HOST "grep -qF '$PUBKEY' ~/.ssh/authorized_keys 2>/dev/null || echo '$PUBKEY' >> ~/.ssh/authorized_keys"
+ssh $SSH_OPTS ark@$HOST "chmod 600 ~/.ssh/authorized_keys"
+
 echo "Updating apt repos..."
 ssh $SSH_OPTS ark@$HOST "sudo apt-get update -qq"
 
