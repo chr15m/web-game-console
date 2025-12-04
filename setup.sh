@@ -12,7 +12,7 @@ SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersi
 
 # Find available SSH public key
 PUBKEY=""
-for keyfile in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
+for keyfile in ~/.ssh/id_rsa.pub ~/.ssh/id_ed25519.pub ~/.ssh/id_ecdsa.pub; do
     if [ -f "$keyfile" ]; then
         PUBKEY=$(cat "$keyfile")
         echo "Using SSH key: $keyfile"
@@ -30,8 +30,27 @@ ssh $SSH_OPTS ark@$HOST "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
 ssh $SSH_OPTS ark@$HOST "grep -qF '$PUBKEY' ~/.ssh/authorized_keys 2>/dev/null || echo '$PUBKEY' >> ~/.ssh/authorized_keys"
 ssh $SSH_OPTS ark@$HOST "chmod 600 ~/.ssh/authorized_keys"
 
-echo "Updating apt repos..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get update -qq"
+echo "Checking apt cache age..."
+APT_UPDATE_NEEDED=$(ssh $SSH_OPTS ark@$HOST '
+    cache=/var/cache/apt/pkgcache.bin
+    if [ -f "$cache" ]; then
+        age=$(($(date +%s) - $(stat -c %Y "$cache")))
+        if [ $age -lt 2592000 ]; then
+            echo "no"
+        else
+            echo "yes"
+        fi
+    else
+        echo "yes"
+    fi
+')
+
+if [ "$APT_UPDATE_NEEDED" = "yes" ]; then
+    echo "Updating apt repos..."
+    ssh $SSH_OPTS ark@$HOST "sudo apt-get update -qq"
+else
+    echo "Apt cache is fresh (less than 30 days old), skipping update."
+fi
 
 echo "Ensuring xorg is installed..."
 ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y xorg"
