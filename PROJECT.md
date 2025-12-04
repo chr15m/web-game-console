@@ -22,9 +22,47 @@ The goal is to run a web browser on Xorg to deliver games via Nostr feeds.
 
 - **Display Server**: Xorg 1.20.5
 - **Window Manager**: matchbox-window-manager (kiosk-style, single window)
-- **GPU Driver**: Mali driver (mali_drv.so) with hardware acceleration disabled
+- **GPU Driver**: modesetting (Mali driver fails to load)
 - **Browser**: surf (WebKit-based, suckless)
 - **Cursor hiding**: unclutter
+
+### GPU/3D Acceleration Status
+
+**No hardware 3D/GLES acceleration is currently working.**
+
+Analysis from Xorg log:
+
+1. **Mali driver fails to load**:
+   ```
+   (EE) LoadModule: Module mali does not have a maliModuleData data object.
+   (EE) Failed to load module "mali" (invalid module, 0)
+   ```
+   The `mali_drv.so` is incompatible with this Xorg version (likely ABI mismatch or wrong architecture).
+
+2. **Fell back to modesetting driver**:
+   ```
+   (II) modeset(0): using drv /dev/dri/card0
+   ```
+
+3. **glamor (GPU acceleration) explicitly disabled**:
+   ```
+   (**) modeset(0): glamor disabled
+   ```
+   This is due to `AccelMethod "none"` in the config.
+
+4. **No DRI2 support**:
+   ```
+   (II) AIGLX: Screen 0 is not DRI2 capable
+   ```
+
+5. **Using software rendering for GLX**:
+   ```
+   (II) IGLX: Loaded and initialized swrast
+   (II) GLX: Initialized DRISWRAST GL provider for screen 0
+   ```
+   `swrast` = software rasterizer (CPU-based, no GPU).
+
+**Summary**: X is running with the modesetting driver doing basic 2D via KMS, and any OpenGL calls go through software rendering (swrast). The Mali GPU is not being used for acceleration at all.
 
 ### Network Access
 
@@ -39,7 +77,7 @@ The goal is to run a web browser on Xorg to deliver games via Nostr feeds.
 - `setup.sh` - Idempotent setup script run from local machine
 - `launch.sh` - Stops GDM, sets tty permissions, kills emulationstation, starts X
 - `xinitrc` - X startup script (copied to `~/.xinitrc` on device)
-- `driver/mali_drv.so` - Mali GPU driver for Xorg
+- `driver/mali_drv.so` - Mali GPU driver for Xorg (currently not working)
 - `driver/99-mali.conf` - Xorg configuration for Mali GPU
 - `index.html` - Test HTML file
 
@@ -60,7 +98,7 @@ Section "Screen"
 EndSection
 ```
 
-Note: Hardware acceleration is currently disabled (`AccelMethod "none"`).
+Note: Hardware acceleration is currently disabled (`AccelMethod "none"`), and the Mali driver fails to load anyway.
 
 ### Input Devices
 
@@ -179,6 +217,13 @@ The `~/.xinitrc` will:
 
 ## Updates
 
+- **2025-12-04**: Confirmed no GPU acceleration
+  - Mali driver (`mali_drv.so`) fails to load with "maliModuleData" error
+  - Likely ABI mismatch or wrong architecture for Xorg 1.20.5
+  - X falls back to modesetting driver with software rendering (swrast)
+  - glamor disabled, no DRI2 support
+  - All OpenGL goes through CPU-based software rasterizer
+
 - **2025-12-04**: Created launch.sh script
   - Stops gdm3 to free memory and prevent conflicts
   - Sets tty permissions (required after each reboot)
@@ -232,8 +277,9 @@ The `~/.xinitrc` will:
 
 ## Known Issues
 
-- X server uses modeset driver, not Mali driver (need to investigate)
-- Hardware acceleration disabled in Mali config
+- Mali driver fails to load ("maliModuleData" error) - incompatible with Xorg 1.20.5
+- X server uses modesetting driver, not Mali driver
+- All 3D/OpenGL uses software rendering (swrast) - no GPU acceleration
 - TTY permissions reset on reboot (launch.sh handles this)
 
 ## Debugging Black Bar Issue (Resolved)
@@ -275,10 +321,10 @@ ssh ark@${IP} "DISPLAY=:0 xwininfo -id <window-id>"
 
 ## Next Steps
 
+- Investigate Mali driver compatibility (find correct driver for Xorg 1.20.5)
 - Set up joystick-to-keyboard mapping (joy2key or similar) for game controls
 - Set up Nostr game feed integration
 - Create auto-start mechanism for X + browser
-- Investigate Mali hardware acceleration
 
 ## References
 

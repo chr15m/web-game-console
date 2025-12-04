@@ -2,6 +2,8 @@
 - [ ] Basic gamepad web app test in surf
 - [ ] Get https://rogule.com/game.html showing up
 
+- [ ] Figure out how to get 3d acceleration working
+- [ ] Figure out how to do 'Enable remote services' (from emulationstation), or enable SSH
 - [ ] Get it booting into surf instead of emustation
 - [ ] Some way of easily getting back to emustation without network access
 
