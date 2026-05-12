@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Audio Test</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            padding: 20px;
+            text-align: center;
+            margin-top: 100px;
+        }
+        h1 { font-size: 3em; }
+        #status { font-size: 1.5em; color: yellow; margin-top: 20px; }
+    </style>
+</head>
+<body tabindex="0">
+    <h1>Web Audio API Test</h1>
+    <div id="status">Press any button on the gamepad to play audio...</div>
+
+    <script>
+        document.body.focus();
+
+        let audioCtx = null;
+        let previousButtons = [];
+        let polling = false;
+
+        // C Major scale frequencies
+        const majorScale = [
+            261.63, // C4 (Button 0)
+            293.66, // D4 (Button 1)
+            329.63, // E4 (Button 2)
+            349.23, // F4 (Button 3)
+            392.00, // G4 (Button 4)
+            440.00, // A4 (Button 5)
+            493.88, // B4 (Button 6)
+            523.25, // C5 (Button 7)
+            587.33, // D5 (Button 8)
+            659.25, // E5 (Button 9)
+            698.46, // F5 (Button 10)
+            783.99, // G5 (Button 11)
+            880.00, // A5 (Button 12)
+            987.77, // B5 (Button 13)
+            1046.50,// C6 (Button 14)
+            1174.66,// D6 (Button 15)
+            1318.51 // E6 (Button 16)
+        ];
+
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log("Gamepad connected:", e.gamepad);
+            
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            document.getElementById("status").textContent = "Gamepad connected! Press buttons to play notes.";
+            document.getElementById("status").style.color = "lime";
+
+            if (!polling) {
+                polling = true;
+                poll();
+            }
+        });
+
+        function playTone(freq) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = 'square';
+            osc.frequency.value = freq;
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            
+            // Volume envelope to avoid clicking
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.02);
+            gainNode.gain.setValueAtTime(0.1, now + 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        function poll() {
+            const pads = navigator.getGamepads();
+            const gp = pads[0]; // Use the first connected gamepad
+
+            if (gp) {
+                for (let b = 0; b < gp.buttons.length; b++) {
+                    const isPressed = gp.buttons[b].pressed;
+                    const wasPressed = previousButtons[b];
+
+                    // Trigger tone only on the initial press (edge detection)
+                    if (isPressed && !wasPressed) {
+                        // Check for "back" button (Y=3, Select=12, Start=13, Special=16)
+                        if (b === 3 || b === 12 || b === 13 || b === 16) {
+                            window.location.href = 'index.html';
+                            return;
+                        }
+                        const freq = majorScale[b % majorScale.length];
+                        playTone(freq);
+                        document.getElementById("status").textContent = `Button ${b} pressed: ${freq} Hz`;
+                    }
+                    previousButtons[b] = isPressed;
+                }
+            }
+            
+            requestAnimationFrame(poll);
+        }
+    </script>
+</body>
+</html>

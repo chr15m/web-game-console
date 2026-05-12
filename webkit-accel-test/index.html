@@ -2,115 +2,110 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Audio Test</title>
+    <title>R36S Web Console Menu</title>
     <style>
         body {
             background-color: #222;
             color: #fff;
             font-family: sans-serif;
-            padding: 20px;
             text-align: center;
-            margin-top: 100px;
+            padding-top: 50px;
+            margin: 0;
         }
-        h1 { font-size: 3em; }
-        #status { font-size: 1.5em; color: yellow; margin-top: 20px; }
+        h1 { font-size: 3em; margin-bottom: 50px; }
+        #menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .menu-item {
+            font-size: 2em;
+            padding: 15px 40px;
+            border: 3px solid transparent;
+            border-radius: 10px;
+            transition: all 0.1s;
+            background-color: #333;
+            width: 60%;
+        }
+        .selected {
+            border-color: lime;
+            color: lime;
+            background-color: #444;
+            transform: scale(1.05);
+        }
+        #instructions {
+            margin-top: 50px;
+            color: #888;
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body tabindex="0">
-    <h1>Web Audio API Test</h1>
-    <div id="status">Press any button on the gamepad to play audio...</div>
+    <h1>Select Demo</h1>
+    <div id="menu">
+        <div class="menu-item selected" data-href="basic-gamepad.html">Gamepad Test</div>
+        <div class="menu-item" data-href="basic-webaudio.html">Web Audio Test</div>
+        <div class="menu-item" data-href="basic-webgl.html">WebGL Test</div>
+    </div>
+    <div id="instructions">Use D-Pad (Up/Down) / Left Stick to navigate.<br>Press A/B/X to select.</div>
 
     <script>
         document.body.focus();
+        
+        const items = document.querySelectorAll('.menu-item');
+        let selectedIndex = 0;
+        let lastAxisY = 0;
+        let lastButtonPress = false;
+        let lastDpadUp = false;
+        let lastDpadDown = false;
 
-        let audioCtx = null;
-        let previousButtons = [];
-        let polling = false;
-
-        // C Major scale frequencies
-        const majorScale = [
-            261.63, // C4 (Button 0)
-            293.66, // D4 (Button 1)
-            329.63, // E4 (Button 2)
-            349.23, // F4 (Button 3)
-            392.00, // G4 (Button 4)
-            440.00, // A4 (Button 5)
-            493.88, // B4 (Button 6)
-            523.25, // C5 (Button 7)
-            587.33, // D5 (Button 8)
-            659.25, // E5 (Button 9)
-            698.46, // F5 (Button 10)
-            783.99, // G5 (Button 11)
-            880.00, // A5 (Button 12)
-            987.77, // B5 (Button 13)
-            1046.50,// C6 (Button 14)
-            1174.66,// D6 (Button 15)
-            1318.51 // E6 (Button 16)
-        ];
-
-        window.addEventListener("gamepadconnected", (e) => {
-            console.log("Gamepad connected:", e.gamepad);
-            
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-
-            document.getElementById("status").textContent = "Gamepad connected! Press buttons to play notes.";
-            document.getElementById("status").style.color = "lime";
-
-            if (!polling) {
-                polling = true;
-                poll();
-            }
-        });
-
-        function playTone(freq) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            osc.type = 'square';
-            osc.frequency.value = freq;
-            
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            const now = audioCtx.currentTime;
-            
-            // Volume envelope to avoid clicking
-            gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.02);
-            gainNode.gain.setValueAtTime(0.1, now + 0.1);
-            gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
-
-            osc.start(now);
-            osc.stop(now + 0.2);
+        function updateSelection() {
+            items.forEach((item, i) => {
+                if (i === selectedIndex) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
         }
 
         function poll() {
             const pads = navigator.getGamepads();
-            const gp = pads[0]; // Use the first connected gamepad
-
-            if (gp) {
-                for (let b = 0; b < gp.buttons.length; b++) {
-                    const isPressed = gp.buttons[b].pressed;
-                    const wasPressed = previousButtons[b];
-
-                    // Trigger tone only on the initial press (edge detection)
-                    if (isPressed && !wasPressed) {
-                        const freq = majorScale[b % majorScale.length];
-                        playTone(freq);
-                        document.getElementById("status").textContent = `Button ${b} pressed: ${freq} Hz`;
-                    }
-                    previousButtons[b] = isPressed;
-                }
-            }
+            const gp = pads[0];
             
+            if (gp) {
+                // Axis navigation (Left Stick Y is usually axis 1)
+                const axisY = gp.axes[1] || 0;
+                
+                // D-Pad buttons (8=Up, 9=Down on R36S)
+                const dpadUp = gp.buttons.length > 8 ? gp.buttons[8].pressed : false;
+                const dpadDown = gp.buttons.length > 9 ? gp.buttons[9].pressed : false;
+
+                if ((axisY > 0.5 || dpadDown) && lastAxisY <= 0.5 && !lastDpadDown) {
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    updateSelection();
+                } else if ((axisY < -0.5 || dpadUp) && lastAxisY >= -0.5 && !lastDpadUp) {
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                    updateSelection();
+                }
+                
+                lastAxisY = axisY;
+                lastDpadUp = dpadUp;
+                lastDpadDown = dpadDown;
+
+                // Button press (A=1, B=0, X=2)
+                const buttonPressed = [0, 1, 2].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed);
+                if (buttonPressed && !lastButtonPress) {
+                    window.location.href = items[selectedIndex].getAttribute('data-href');
+                    return; // Stop polling to prevent double triggers during navigation
+                }
+                lastButtonPress = buttonPressed;
+            }
             requestAnimationFrame(poll);
         }
+        
+        poll();
     </script>
 </body>
 </html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test Page</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        #indicator {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #333;
+            margin-top: 20px;
+            transition: background-color 0.1s;
+        }
+    </style>
+</head>
+<body tabindex="0">
+    <h1>Gamepad API Test</h1>
+    <div id="status" style="color: yellow;">Press any button on the gamepad...</div>
+    <div id="indicator"></div>
+    <pre id="state" style="font-size: 1.5em; margin-top: 20px;"></pre>
+
+    <script>
+        // Ensure the body has focus so it can receive input events
+        document.body.focus();
+
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log("Gamepad connected:", e.gamepad);
+            document.getElementById("status").textContent =
+                `CONNECTED idx=${e.gamepad.index} id="${e.gamepad.id}" ` +
+                `buttons=${e.gamepad.buttons.length} axes=${e.gamepad.axes.length} ` +
+                `mapping="${e.gamepad.mapping}"`;
+            document.getElementById("status").style.color = "lime";
+        });
+
+        window.addEventListener("gamepaddisconnected", (e) => {
+            console.log("Gamepad disconnected:", e.gamepad.index);
+            document.getElementById("status").textContent = `DISCONNECTED idx=${e.gamepad.index}`;
+            document.getElementById("status").style.color = "red";
+        });
+
+        function poll() {
+            const pads = navigator.getGamepads();
+            const lines = [];
+            let isActive = false;
+
+            for (let i = 0; i < pads.length; i++) {
+                const gp = pads[i];
+                if (!gp) continue;
+
+                // Check for "back" button (Y=3, Select=12, Start=13, Special=16)
+                if ([3, 12, 13, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                lines.push(`[${i}] ${gp.id}`);
+                lines.push(`    btns: ` + gp.buttons.map((b,j) => `${j}:${b.pressed?'1':'0'}`).join(' '));
+                lines.push(`    axes: ` + gp.axes.map(a => a.toFixed(2)).join(' '));
+
+                if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.1)) {
+                    isActive = true;
+                }
+            }
+            
+            const stateText = lines.join('\n');
+            if (stateText) {
+                document.getElementById("state").textContent = stateText;
+            }
+
+            document.getElementById("indicator").style.backgroundColor = isActive ? "lime" : "#333";
+            
+            requestAnimationFrame(poll);
+        }
+        poll();
+    </script>
+</body>
+</html>

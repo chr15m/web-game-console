@@ -36,7 +36,7 @@ Running Chromium in this embedded context changes how it interacts with the host
 *   **WebGL & Canvas:** Fully supported and hardware-accelerated. The unmasked renderer correctly reports `Mali-G31` (Vendor: ARM) and achieves 50-60 FPS.
 *   **CSS Animations:** Hardware composited and smooth.
 *   **Networking:** HTTP, HTTPS, Fetch, XHR, and WebSockets work perfectly.
-*   **Web Audio API:** Supported (routes through the device's PulseAudio daemon).
+*   **Web Audio API:** Fully supported and tested. Audio routes correctly through the device's PulseAudio daemon and plays smoothly.
 
 ### 🟡 Requires Configuration
 *   **Local Storage / IndexedDB:** By default, a basic `QWebEngineView` may use volatile temporary storage. We must explicitly configure a `QWebEngineProfile` with a persistent path on the SD card so game saves survive reboots.
