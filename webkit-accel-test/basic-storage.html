@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Storage Test</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            padding: 40px;
+            text-align: center;
+        }
+        h1 { color: lime; font-size: 3em; }
+        .result { font-size: 2em; margin: 30px 0; padding: 20px; background: #333; border-radius: 10px; }
+        .error { color: #ff4444; }
+    </style>
+</head>
+<body tabindex="0">
+    <h1>Storage Persistence Test</h1>
+    <div class="result" id="ls-result">Local Storage: Loading...</div>
+    <div class="result" id="idb-result">IndexedDB: Loading...</div>
+    <div style="margin-top: 50px; color: #888; font-size: 1.2em;">Press Y / Select / Start to return to menu.</div>
+
+    <script>
+        document.body.focus();
+
+        // 1. Local Storage Test
+        try {
+            let lsCount = parseInt(localStorage.getItem('testCount') || '0', 10);
+            lsCount++;
+            localStorage.setItem('testCount', lsCount);
+            document.getElementById('ls-result').textContent = `Local Storage: ${lsCount} loads`;
+        } catch (e) {
+            document.getElementById('ls-result').textContent = `Local Storage Error: ${e.message}`;
+            document.getElementById('ls-result').classList.add('error');
+        }
+
+        // 2. IndexedDB Test
+        try {
+            const request = indexedDB.open('TestDB', 1);
+            
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('counts')) {
+                    db.createObjectStore('counts', { keyPath: 'id' });
+                }
+            };
+            
+            request.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction('counts', 'readwrite');
+                const store = tx.objectStore('counts');
+                const getReq = store.get('visits');
+                
+                getReq.onsuccess = () => {
+                    let data = getReq.result || { id: 'visits', count: 0 };
+                    data.count++;
+                    store.put(data);
+                    document.getElementById('idb-result').textContent = `IndexedDB: ${data.count} loads`;
+                };
+                
+                getReq.onerror = () => {
+                    document.getElementById('idb-result').textContent = `IndexedDB Read Error`;
+                    document.getElementById('idb-result').classList.add('error');
+                };
+            };
+            
+            request.onerror = (e) => {
+                document.getElementById('idb-result').textContent = `IndexedDB Open Error: ${e.target.error}`;
+                document.getElementById('idb-result').classList.add('error');
+            };
+        } catch (e) {
+            document.getElementById('idb-result').textContent = `IndexedDB Exception: ${e.message}`;
+            document.getElementById('idb-result').classList.add('error');
+        }
+
+        // Gamepad polling to exit
+        function poll() {
+            const pads = navigator.getGamepads();
+            const gp = pads[0];
+            
+            // Check for "back" button (Y=3, Select=12, Start=13, Special=16)
+            if (gp && [3, 12, 13, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+                window.location.href = 'index.html';
+                return;
+            }
+            requestAnimationFrame(poll);
+        }
+        poll();
+    </script>
+</body>
+</html>
