@@ -14,4 +14,5 @@ export XDG_RUNTIME_DIR=/run/user/$(id -u)
 export QT_QPA_PLATFORM=eglfs
 
 echo "Launching browser..."
-python3 /home/ark/browser.py < /dev/tty1 > /dev/tty1 2>&1
+# Use tee so output goes to both the physical TTY (for DRM) and the SSH session
+PYTHONUNBUFFERED=1 python3 /home/ark/browser.py < /dev/tty1 2>&1 | tee /dev/tty1

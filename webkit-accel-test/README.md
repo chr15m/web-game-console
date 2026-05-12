@@ -4,6 +4,17 @@ This directory contains the proof-of-concept for running a hardware-accelerated 
 
 It uses `python3-pyqt5.qtwebengine` (which wraps Chromium 69) and the `eglfs` Qt platform plugin to render directly to the DRM/KMS framebuffer using the Mali-G31 GPU.
 
+## Deployment
+
+To deploy and run the test on the device, you must run the deployment script from within this directory:
+
+```bash
+cd webkit-accel-test
+./deploy.sh [DEVICE_IP]
+```
+
+The script will copy the necessary files to the device and execute `launch-browser.sh`, which handles stopping EmulationStation and setting up the required environment variables. It also automatically sets up an SSH tunnel for remote debugging. You can inspect the page by opening `http://localhost:9222` in a Chromium-based browser on your computer while the script is running.
+
 ## Launch Requirements
 
 To successfully acquire the DRM Master lock and render to the screen, the process must be attached to a physical TTY. Running it blindly over an SSH pseudo-terminal (`/dev/pts/0`) will result in a black screen.
