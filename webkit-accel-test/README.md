@@ -9,8 +9,7 @@ It uses `python3-pyqt5.qtwebengine` (which wraps Chromium 69) and the `eglfs` Qt
 To deploy and run the test on the device, you must run the deployment script from within this directory:
 
 ```bash
-cd webkit-accel-test
-./deploy.sh [DEVICE_IP]
+cd webkit-accel-test && ./deploy.sh
 ```
 
 The script will copy the necessary files to the device and execute `launch-browser.sh`, which handles stopping EmulationStation and setting up the required environment variables. It also automatically sets up an SSH tunnel for remote debugging. You can inspect the page by opening `http://localhost:9222` in a Chromium-based browser on your computer while the script is running.
