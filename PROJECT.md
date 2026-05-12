@@ -324,6 +324,11 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 
 ## Updates
 
+- **2026-05-12**: SUCCESS - Web Audio API working!
+  - Successfully tested the Web Audio API using an oscillator node.
+  - Audio routes correctly through the device's PulseAudio daemon.
+  - Playback is smooth and can be triggered directly by HTML5 Gamepad API events.
+
 - **2026-05-12**: SUCCESS - Native HTML5 Gamepad API working!
   - Discovered that the Gamepad API *does* work natively under EGLFS.
   - The issue was the Chromium sandbox blocking access to `/dev/input/event*`.
