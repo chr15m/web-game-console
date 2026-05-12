@@ -312,7 +312,7 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 
 **Current status:**
 - **SUCCESS**: Hardware-accelerated web rendering achieved! By using `python3-pyqt5.qtwebengine` with `QT_QPA_PLATFORM=eglfs` and redirecting I/O to `/dev/tty1`, we successfully bypassed X11/Wayland and rendered directly to the screen using the Mali GPU.
-- **Performance Verified**: Tested complex CSS animations ("Juice It" bounce) and confirmed they run smoothly, proving the hardware compositor is active and performant.
+- **Performance Verified**: Tested complex CSS animations ("Juice It" bounce) and a full-screen WebGL spinning cube. WebGL reports the unmasked renderer as "Mali-G31" (Vendor: ARM) and runs at a smooth 50-60 FPS, proving the hardware compositor and 3D acceleration are fully active.
 - **Strategic Pivot**: The X11/Wayland paths are archived. They are dead ends due to Mali blob/kernel mismatches and missing GBM symbols.
 - **ROCKNIX blocked**: Fails to boot without hardware debugging (UART), which we are avoiding for now.
 
@@ -329,6 +329,7 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
   - Without this redirection, processes running over SSH (`/dev/pts/0`) are denied the DRM Master lock, resulting in a black screen despite successful EGL context creation.
   - We now have a fully working, hardware-accelerated Chromium-based browser running on the R36S without X11 or Wayland.
   - Tested CSS animations and confirmed they run smoothly, proving the hardware compositor is active.
+  - Tested WebGL with a full-screen 3D spinning cube. Queried `WEBGL_debug_renderer_info` which confirmed the unmasked renderer is "Mali-G31" (Vendor: ARM). Achieved a solid 50-60 FPS.
 
 - **2026-05-11**: Discovered EmulationStation launch mechanism and Qt5 Web packages
   - Found `libqt5webengine5` and `libqt5webkit5` are available in the Ubuntu 19.10 repos. This provides a direct path to a hardware-accelerated browser using Qt's `eglfs` platform plugin.
@@ -337,7 +338,7 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
   - Instead, it relies on physical TTY access: `chmod 666 /dev/tty1`, `TERM=linux`, and `XDG_RUNTIME_DIR=/run/user/$UID/`.
   - This explains why previous SDL2/KMSDRM Python tests over SSH (`/dev/pts/0`) failed with a black screen: they lacked the physical TTY required to acquire the DRM master lock.
 
-- **2025-12-11**: Strategic Pivot - Abandoning X11/Wayland
+- **2026-05-11**: Strategic Pivot - Abandoning X11/Wayland
   - Concluded that forcing a modern desktop Linux graphics stack (X11/Wayland) onto this BSP kernel (4.4.189) with proprietary blobs is a dead end.
   - EmulationStation proves the hardware and drivers are capable of EGL/DRM rendering.
   - Pivoting to the "Embedded Industry" approach: bypassing display servers entirely.

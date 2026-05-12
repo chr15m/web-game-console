@@ -12,7 +12,7 @@
 *(Note: X11/surf tasks below are paused/archived while we pursue direct EGL/KMS rendering)*
 - [ ] Basic gamepad web app test in surf
 
-- [ ] Figure out how to get 3d acceleration working
+- [x] Figure out how to get 3d acceleration working
 - [ ] Figure out how to do 'Enable remote services' (from emulationstation), or enable SSH
 - [ ] Get it booting into surf instead of emustation
 - [ ] Some way of easily getting back to emustation without network access
