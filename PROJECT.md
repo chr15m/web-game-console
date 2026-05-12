@@ -136,10 +136,10 @@ Software rendering causes **jerky CSS animations and transitions**. A 2D game wa
 
 ### Software Stack
 
-- **Display Server**: Xorg 1.20.5 (currently), Wayland blocked by Mali GBM issues
+- **Display Server**: Xorg 1.20.5 (currently implemented, but being phased out for direct EGL/KMS), Wayland blocked by Mali GBM issues
 - **Window Manager**: matchbox-window-manager (kiosk-style, single window)
 - **GPU Driver**: modesetting (Mali driver fails to load)
-- **Browser**: surf (WebKit-based, suckless)
+- **Browser**: surf (WebKit-based, suckless) - *Note: pivoting to WPE WebKit*
 - **Cursor hiding**: unclutter
 
 ### APT Sources
@@ -264,6 +264,9 @@ Key processes running on the device:
 1. Enable WiFi and connect from ArkOS menu
 2. Enable remote services (SSH) from ArkOS menu (Options > Remote Services)
 
+### Manual Debugging Notes
+- `strace` is not installed by default on ArkOS. If debugging binaries, install it first: `sudo apt install strace`.
+
 ### Automated Steps (via setup.sh)
 
 Run from local machine:
@@ -308,16 +311,36 @@ The `~/.xinitrc` will:
 See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceleration options.
 
 **Current status:**
-- **ArkOS-R3XS tested - BLOCKED** - Same Mali library issues as original ArkOS
-- ROCKNIX R36S image failed to boot (screen flashes, clicks, no OS)
-- Mali r11p0 libraries not found in any public archive
+- **SUCCESS**: Hardware-accelerated web rendering achieved! By using `python3-pyqt5.qtwebengine` with `QT_QPA_PLATFORM=eglfs` and redirecting I/O to `/dev/tty1`, we successfully bypassed X11/Wayland and rendered directly to the screen using the Mali GPU.
+- **Strategic Pivot**: The X11/Wayland paths are archived. They are dead ends due to Mali blob/kernel mismatches and missing GBM symbols.
+- **ROCKNIX blocked**: Fails to boot without hardware debugging (UART), which we are avoiding for now.
 
 **Recommended next steps:**
-1. Debug ROCKNIX boot failure (try different SD card, different flash tool)
-2. Find older weston/kmscube that doesn't require modern GBM functions
-3. Extract Mali libs from stock R36S firmware
+1. **Input Handling**: Implement gamepad input handling within the PyQt5 application so it can be passed to the web environment.
+2. **Performance Testing**: Test WebGL and CSS animation performance in the new QtWebEngine environment.
+3. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
 
 ## Updates
+
+- **2026-05-12**: SUCCESS - Hardware-accelerated browser working!
+  - Successfully launched a PyQt5 WebEngine script directly to the screen using EGLFS.
+  - The critical missing piece was TTY redirection: `< /dev/tty1 > /dev/tty1 2>&1`.
+  - Without this redirection, processes running over SSH (`/dev/pts/0`) are denied the DRM Master lock, resulting in a black screen despite successful EGL context creation.
+  - We now have a fully working, hardware-accelerated Chromium-based browser running on the R36S without X11 or Wayland.
+
+- **2026-05-11**: Discovered EmulationStation launch mechanism and Qt5 Web packages
+  - Found `libqt5webengine5` and `libqt5webkit5` are available in the Ubuntu 19.10 repos. This provides a direct path to a hardware-accelerated browser using Qt's `eglfs` platform plugin.
+  - Analyzed `/usr/bin/emulationstation/emulationstation.sh` wrapper script.
+  - Discovered it does *not* use custom `LD_LIBRARY_PATH` or `SDL_VIDEODRIVER` vars.
+  - Instead, it relies on physical TTY access: `chmod 666 /dev/tty1`, `TERM=linux`, and `XDG_RUNTIME_DIR=/run/user/$UID/`.
+  - This explains why previous SDL2/KMSDRM Python tests over SSH (`/dev/pts/0`) failed with a black screen: they lacked the physical TTY required to acquire the DRM master lock.
+
+- **2025-12-11**: Strategic Pivot - Abandoning X11/Wayland
+  - Concluded that forcing a modern desktop Linux graphics stack (X11/Wayland) onto this BSP kernel (4.4.189) with proprietary blobs is a dead end.
+  - EmulationStation proves the hardware and drivers are capable of EGL/DRM rendering.
+  - Pivoting to the "Embedded Industry" approach: bypassing display servers entirely.
+  - New focus: WPE WebKit (direct to EGL/KMS) and reverse-engineering EmulationStation's DRM ioctl calls via `strace`.
+  - Hardware hacking (UART) for ROCKNIX debugging is explicitly avoided for now.
 
 - **2025-12-10**: Extensive GPU rendering investigation
   - Discovered EmulationStation binary location: `/usr/bin/emulationstation/emulationstation`
@@ -513,10 +536,7 @@ The ldconfig warnings reveal custom-installed libraries (regular files instead o
 
 **Qt5 with EGL/KMS**: The presence of `libQt5EglFSDeviceIntegration` and `libQt5EglFsKmsSupport` suggests Qt5 apps can run with GPU acceleration via EGL, bypassing X11 entirely. This is the "eglfs" platform plugin.
 
-**Potential QtWebEngine path**: If QtWebEngine (Chromium-based) or QtWebKit is available and built against these libraries, it could provide GPU-accelerated web rendering. However:
-- These are 32-bit (armhf) libraries
-- QtWebEngine is heavy (~100MB+)
-- Would need to verify QtWebEngine package availability
+**Potential QtWebEngine path**: `libqt5webengine5` (Chromium-based) and `libqt5webkit5` *are* available in the Ubuntu 19.10 repositories. Since Qt5 EGLFS is already proven to initialize an EGL context successfully on this device, building a minimal QtWebEngine/QtWebKit application running on the `eglfs` platform plugin is currently the most promising path for a hardware-accelerated browser.
 
 **EmulationStation uses Qt?**: The presence of these Qt libraries suggests EmulationStation or other ArkOS components may use Qt with EGL for GPU-accelerated rendering. This could explain how they achieve smooth performance.
 
@@ -535,12 +555,21 @@ The ldconfig warnings reveal custom-installed libraries (regular files instead o
 
 EmulationStation achieves GPU acceleration through:
 
-### EmulationStation Binary Location
+### EmulationStation Binary Location & Launch Mechanism
 
-EmulationStation is installed in a non-standard location, likely a custom build by the manufacturer:
+EmulationStation is launched via a systemd service (`emulationstation.service`) which calls a wrapper script:
 ```
-/usr/bin/emulationstation/emulationstation
+/usr/bin/emulationstation/emulationstation.sh
 ```
+This script eventually calls the binary at `/usr/bin/emulationstation/emulationstation`.
+
+**Critical Discovery**: The wrapper script does *not* set `LD_LIBRARY_PATH` or `SDL_VIDEODRIVER`. Instead, it sets up physical TTY access:
+```bash
+sudo chmod 666 /dev/tty1
+export TERM=linux
+export XDG_RUNTIME_DIR=/run/user/$UID/
+```
+This reveals that KMS/DRM applications on this device must be attached to an active physical TTY (like `tty1`) to acquire the DRM master lock. Previous tests run over SSH (`/dev/pts/0`) failed with a black screen because they lacked this physical TTY attachment.
 
 Verified with strace:
 ```bash
