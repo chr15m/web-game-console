@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Platformer Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            color: #fff;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        h2 { margin: 0 0 10px 0; color: #fff; }
+    </style>
+</head>
+<body tabindex="0">
+    <div id="info">
+        <h2>Platformer Test</h2>
+        <p>D-Pad / Left Stick to move. A/B to jump.</p>
+        <p>Y/Select/Start to exit.</p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        document.body.focus();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let audioCtx = null;
+
+        function playJumpSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'square';
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            osc.frequency.setValueAtTime(450, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            
+            osc.start(now);
+            osc.stop(now + 0.1);
+        }
+
+        const player = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height / 2,
+            width: 50,
+            height: 50,
+            vx: 0,
+            vy: 0,
+            speed: 8,
+            jumpPower: -32,
+            gravity: 1.6,
+            grounded: false
+        };
+
+        const platforms = [
+            { x: 100, y: 550, width: 200, height: 20 },
+            { x: 400, y: 450, width: 200, height: 20 },
+            { x: 150, y: 300, width: 150, height: 20 },
+            { x: 450, y: 150, width: 200, height: 20 }
+        ];
+
+        let lastJumpButton = false;
+
+        function pollInput() {
+            const pads = navigator.getGamepads();
+            const gp = pads[0];
+            if (!gp) return;
+
+            // Init audio context on first interaction
+            if (!audioCtx && gp.buttons.some(b => b.pressed)) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            }
+
+            // Exit to menu (Y=3, Select=12, Start=13, Special=16)
+            if ([3, 12, 13, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Movement
+            let moveX = 0;
+            const axisX = gp.axes[0] || 0;
+            const dpadLeft = gp.buttons.length > 10 ? gp.buttons[10].pressed : false;
+            const dpadRight = gp.buttons.length > 11 ? gp.buttons[11].pressed : false;
+
+            if (axisX < -0.5 || dpadLeft) moveX = -1;
+            if (axisX > 0.5 || dpadRight) moveX = 1;
+
+            player.vx = moveX * player.speed;
+
+            // Jump (A=1, B=0)
+            const jumpPressed = (gp.buttons[0] && gp.buttons[0].pressed) || 
+                                (gp.buttons[1] && gp.buttons[1].pressed);
+            
+            if (jumpPressed && !lastJumpButton && player.grounded) {
+                player.vy = player.jumpPower;
+                player.grounded = false;
+                playJumpSound();
+            }
+            lastJumpButton = jumpPressed;
+        }
+
+        function update() {
+            player.vy += player.gravity;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Screen bounds (horizontal)
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) {
+                player.x = canvas.width - player.width;
+            }
+
+            player.grounded = false;
+
+            // Floor collision
+            if (player.y + player.height >= canvas.height) {
+                player.y = canvas.height - player.height;
+                player.vy = 0;
+                player.grounded = true;
+            }
+
+            // Platform collision (landing on top)
+            for (let p of platforms) {
+                if (player.vy >= 0 && 
+                    player.x < p.x + p.width && 
+                    player.x + player.width > p.x && 
+                    player.y + player.height >= p.y && 
+                    player.y + player.height - player.vy <= p.y) {
+                    player.y = p.y - player.height;
+                    player.vy = 0;
+                    player.grounded = true;
+                }
+            }
+        }
+
+        function draw() {
+            // Clear screen
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw platforms
+            ctx.fillStyle = '#555';
+            for (let p of platforms) {
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+            }
+
+            // Draw player
+            ctx.fillStyle = 'lime';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function loop() {
+            pollInput();
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
