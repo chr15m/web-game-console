@@ -2,76 +2,75 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Test Page</title>
+    <title>Audio Test</title>
     <style>
         body {
             background-color: #222;
             color: #fff;
             font-family: sans-serif;
             padding: 20px;
+            text-align: center;
+            margin-top: 100px;
         }
-        #indicator {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #333;
-            margin-top: 20px;
-            transition: background-color 0.1s;
-        }
+        h1 { font-size: 3em; }
+        #status { font-size: 1.5em; color: yellow; margin-top: 20px; }
     </style>
 </head>
 <body tabindex="0">
-    <h1>Gamepad API Test</h1>
-    <div id="status" style="color: yellow;">Press any button on the gamepad...</div>
-    <div id="indicator"></div>
-    <pre id="state" style="font-size: 1.5em; margin-top: 20px;"></pre>
+    <h1>Web Audio API Test</h1>
+    <div id="status">Press any button on the gamepad to play audio...</div>
 
     <script>
-        // Ensure the body has focus so it can receive input events
         document.body.focus();
+
+        let audioPlayed = false;
 
         window.addEventListener("gamepadconnected", (e) => {
             console.log("Gamepad connected:", e.gamepad);
-            document.getElementById("status").textContent =
-                `CONNECTED idx=${e.gamepad.index} id="${e.gamepad.id}" ` +
-                `buttons=${e.gamepad.buttons.length} axes=${e.gamepad.axes.length} ` +
-                `mapping="${e.gamepad.mapping}"`;
-            document.getElementById("status").style.color = "lime";
+            
+            if (!audioPlayed) {
+                audioPlayed = true;
+                document.getElementById("status").textContent = "Playing audio sequence...";
+                document.getElementById("status").style.color = "lime";
+                playAudioSequence();
+            }
         });
 
-        window.addEventListener("gamepaddisconnected", (e) => {
-            console.log("Gamepad disconnected:", e.gamepad.index);
-            document.getElementById("status").textContent = `DISCONNECTED idx=${e.gamepad.index}`;
-            document.getElementById("status").style.color = "red";
-        });
+        function playAudioSequence() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
 
-        function poll() {
-            const pads = navigator.getGamepads();
-            const lines = [];
-            let isActive = false;
-
-            for (let i = 0; i < pads.length; i++) {
-                const gp = pads[i];
-                if (!gp) continue;
-                lines.push(`[${i}] ${gp.id}`);
-                lines.push(`    btns: ` + gp.buttons.map((b,j) => `${j}:${b.pressed?'1':'0'}`).join(' '));
-                lines.push(`    axes: ` + gp.axes.map(a => a.toFixed(2)).join(' '));
-
-                if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.1)) {
-                    isActive = true;
-                }
-            }
+            osc.type = 'square';
             
-            const stateText = lines.join('\n');
-            if (stateText) {
-                document.getElementById("state").textContent = stateText;
-            }
+            // Connect nodes
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
 
-            document.getElementById("indicator").style.backgroundColor = isActive ? "lime" : "#333";
+            const now = audioCtx.currentTime;
             
-            requestAnimationFrame(poll);
+            // Sequence of rising frequencies
+            osc.frequency.setValueAtTime(440, now);        // A4
+            osc.frequency.setValueAtTime(554.37, now + 0.1); // C#5
+            osc.frequency.setValueAtTime(659.25, now + 0.2); // E5
+            osc.frequency.setValueAtTime(880, now + 0.3);    // A5
+
+            // Volume envelope to avoid clicking
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.02);
+            gainNode.gain.setValueAtTime(0.1, now + 0.38);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+
+            // Start and stop
+            osc.start(now);
+            osc.stop(now + 0.4);
+
+            // Reset UI after playing
+            setTimeout(() => {
+                document.getElementById("status").textContent = "Audio finished. Refresh to play again.";
+                document.getElementById("status").style.color = "#888";
+            }, 500);
         }
-        poll();
     </script>
 </body>
 </html>
