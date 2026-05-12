@@ -1,4 +1,5 @@
 import sys
+import os
 from PyQt5.QtCore import QUrl
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -7,15 +8,9 @@ app = QApplication(sys.argv)
 window = QMainWindow()
 view = QWebEngineView()
 
-# A simple high-contrast Hello World
-html = """
-<html>
-<body style='background: #222; color: #0f0; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;'>
-    <h1>Hello Hardware Accelerated World!</h1>
-</body>
-</html>
-"""
-view.setHtml(html)
+# Load external index.html
+html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+view.setUrl(QUrl.fromLocalFile(html_path))
 
 window.setCentralWidget(view)
 window.showFullScreen()
