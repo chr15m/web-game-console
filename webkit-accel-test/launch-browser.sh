@@ -5,6 +5,9 @@ echo "Stopping emulationstation..."
 sudo systemctl stop emulationstation
 sudo pkill -9 -f emulationstation || true
 
+echo "Killing old browser instances..."
+pkill -9 -f browser.py || true
+
 echo "Setting environment variables..."
 export TERM=linux
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
