@@ -312,12 +312,13 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 
 **Current status:**
 - **SUCCESS**: Hardware-accelerated web rendering achieved! By using `python3-pyqt5.qtwebengine` with `QT_QPA_PLATFORM=eglfs` and redirecting I/O to `/dev/tty1`, we successfully bypassed X11/Wayland and rendered directly to the screen using the Mali GPU.
+- **Performance Verified**: Tested complex CSS animations ("Juice It" bounce) and confirmed they run smoothly, proving the hardware compositor is active and performant.
 - **Strategic Pivot**: The X11/Wayland paths are archived. They are dead ends due to Mali blob/kernel mismatches and missing GBM symbols.
 - **ROCKNIX blocked**: Fails to boot without hardware debugging (UART), which we are avoiding for now.
 
 **Recommended next steps:**
 1. **Input Handling**: Implement gamepad input handling within the PyQt5 application so it can be passed to the web environment.
-2. **Performance Testing**: Test WebGL and CSS animation performance in the new QtWebEngine environment.
+2. **Game Testing**: Get a real web game (like rogule.com) running and playable to verify WebGL and input integration.
 3. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
 
 ## Updates
@@ -327,6 +328,7 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
   - The critical missing piece was TTY redirection: `< /dev/tty1 > /dev/tty1 2>&1`.
   - Without this redirection, processes running over SSH (`/dev/pts/0`) are denied the DRM Master lock, resulting in a black screen despite successful EGL context creation.
   - We now have a fully working, hardware-accelerated Chromium-based browser running on the R36S without X11 or Wayland.
+  - Tested CSS animations and confirmed they run smoothly, proving the hardware compositor is active.
 
 - **2026-05-11**: Discovered EmulationStation launch mechanism and Qt5 Web packages
   - Found `libqt5webengine5` and `libqt5webkit5` are available in the Ubuntu 19.10 repos. This provides a direct path to a hardware-accelerated browser using Qt's `eglfs` platform plugin.

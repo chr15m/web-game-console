@@ -5,7 +5,7 @@
 - [ ] Test basic EGL/KMS triangle rendering in C without SDL2 to isolate the display pipeline
 
 **QtWebEngine / EGLFS Tasks:**
-- [ ] Test performance with a basic CSS + emojis translate animation demo in QtWebEngine
+- [x] Test performance with a basic CSS + emojis translate animation demo in QtWebEngine
 - [ ] Implement gamepad input handling in the PyQt5 application
 - [ ] Get https://rogule.com/game.html showing up and playable
 
