@@ -40,13 +40,15 @@ Running Chromium in this embedded context changes how it interacts with the host
 
 ### 🟡 Requires Configuration
 *   **Local Storage / IndexedDB:** By default, a basic `QWebEngineView` may use volatile temporary storage. We must explicitly configure a `QWebEngineProfile` with a persistent path on the SD card so game saves survive reboots.
+*   **HTML5 Gamepad API:** Works perfectly, but **requires the Chromium sandbox to be disabled** (`QTWEBENGINE_DISABLE_SANDBOX=1`). Without this, the sandboxed renderer process is denied read access to `/dev/input/event*`. Note that the R36S controller reports `mapping: ""` (non-standard), so a JavaScript polyfill will be needed to map the raw button indices to the standard Xbox-style layout expected by most web games.
 
 ### 🔴 Missing or Broken
-*   **HTML5 Gamepad API (`navigator.getGamepads()`):** Broken. Chromium relies on desktop Linux subsystems (udev/X11) to detect controllers. Under `eglfs`, Qt consumes the `/dev/input/event*` nodes directly, leaving Chromium blind to the joysticks.
 *   **Keyboard Events from Gamepad:** The R36S gamepad (`/dev/input/event2`) is recognized as a joystick, not a keyboard. Pressing buttons will not trigger standard DOM `onkeydown` events by default.
 *   **Hardware Video Decoding:** `<video>` tags will likely fall back to software decoding, as the standard Ubuntu Chromium build lacks Rockchip VPU patches.
 
-## The Input Bridge Plan
+## The Input Bridge Plan (Archived)
+
+*Update: This plan is no longer necessary. Disabling the Chromium sandbox allows the native HTML5 Gamepad API to read the evdev nodes directly.*
 
 Because the HTML5 Gamepad API is unavailable and the gamepad doesn't trigger keyboard events, we must build a custom input bridge:
 

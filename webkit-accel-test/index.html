@@ -10,11 +10,20 @@
             font-family: sans-serif;
             padding: 20px;
         }
+        #indicator {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #333;
+            margin-top: 20px;
+            transition: background-color 0.1s;
+        }
     </style>
 </head>
 <body tabindex="0">
     <h1>Gamepad API Test</h1>
     <div id="status" style="color: yellow;">Press any button on the gamepad...</div>
+    <div id="indicator"></div>
     <pre id="state" style="font-size: 1.5em; margin-top: 20px;"></pre>
 
     <script>
@@ -39,18 +48,26 @@
         function poll() {
             const pads = navigator.getGamepads();
             const lines = [];
+            let isActive = false;
+
             for (let i = 0; i < pads.length; i++) {
                 const gp = pads[i];
                 if (!gp) continue;
                 lines.push(`[${i}] ${gp.id}`);
                 lines.push(`    btns: ` + gp.buttons.map((b,j) => `${j}:${b.pressed?'1':'0'}`).join(' '));
                 lines.push(`    axes: ` + gp.axes.map(a => a.toFixed(2)).join(' '));
+
+                if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > 0.1)) {
+                    isActive = true;
+                }
             }
             
             const stateText = lines.join('\n');
             if (stateText) {
                 document.getElementById("state").textContent = stateText;
             }
+
+            document.getElementById("indicator").style.backgroundColor = isActive ? "lime" : "#333";
             
             requestAnimationFrame(poll);
         }

@@ -6,7 +6,7 @@
 
 **QtWebEngine / EGLFS Tasks:**
 - [x] Test performance with a basic CSS + emojis translate animation demo in QtWebEngine
-- [ ] Implement gamepad input handling in the PyQt5 application
+- [x] Implement gamepad input handling in the PyQt5 application (Resolved: Native HTML5 Gamepad API works if `QTWEBENGINE_DISABLE_SANDBOX=1` is set)
 - [ ] Get https://rogule.com/game.html showing up and playable
 
 *(Note: X11/surf tasks below are paused/archived while we pursue direct EGL/KMS rendering)*

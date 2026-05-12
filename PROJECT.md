@@ -317,11 +317,18 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 - **ROCKNIX blocked**: Fails to boot without hardware debugging (UART), which we are avoiding for now.
 
 **Recommended next steps:**
-1. **Input Handling**: Implement gamepad input handling within the PyQt5 application so it can be passed to the web environment.
-2. **Game Testing**: Get a real web game (like rogule.com) running and playable to verify WebGL and input integration.
-3. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
+1. **Input Handling (Resolved)**: Native HTML5 Gamepad API works with sandbox disabled.
+2. **Gamepad Mapping**: Write a small JS polyfill to map the raw R36S gamepad indices to the `"standard"` HTML5 gamepad layout.
+3. **Game Testing**: Get a real web game (like rogule.com) running and playable to verify WebGL and input integration.
+4. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
 
 ## Updates
+
+- **2026-05-12**: SUCCESS - Native HTML5 Gamepad API working!
+  - Discovered that the Gamepad API *does* work natively under EGLFS.
+  - The issue was the Chromium sandbox blocking access to `/dev/input/event*`.
+  - Setting `QTWEBENGINE_DISABLE_SANDBOX=1` allows the renderer to read the joysticks directly.
+  - The controller reports `mapping: ""` so a JS remapper will be needed, but no Python `evdev` bridge is required.
 
 - **2026-05-12**: SUCCESS - Hardware-accelerated browser working!
   - Successfully launched a PyQt5 WebEngine script directly to the screen using EGLFS.
