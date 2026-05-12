@@ -36,9 +36,9 @@ Running Chromium in this embedded context changes how it interacts with the host
 *   **CSS Animations:** Hardware composited and smooth.
 *   **Networking:** HTTP, HTTPS, Fetch, XHR, and WebSockets work perfectly.
 *   **Web Audio API:** Fully supported and tested. Audio routes correctly through the device's PulseAudio daemon and plays smoothly.
+*   **Local Storage / IndexedDB:** Fully supported and persistent. The browser wrapper automatically configures a `QWebEngineProfile` with a persistent path (`.storage/<slugified-hostname>`) so game saves survive reboots and are isolated per game.
 
 ### 🟡 Requires Configuration
-*   **Local Storage / IndexedDB:** By default, a basic `QWebEngineView` may use volatile temporary storage. We must explicitly configure a `QWebEngineProfile` with a persistent path on the SD card so game saves survive reboots.
 *   **HTML5 Gamepad API:** Works perfectly, but **requires the Chromium sandbox to be disabled** (`QTWEBENGINE_DISABLE_SANDBOX=1`). Without this, the sandboxed renderer process is denied read access to `/dev/input/event*`. Note that the R36S controller reports `mapping: ""` (non-standard), so a JavaScript polyfill will be needed to map the raw button indices to the standard Xbox-style layout expected by most web games.
 
 ### 🔴 Missing or Broken

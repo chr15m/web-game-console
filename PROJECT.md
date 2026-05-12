@@ -324,6 +324,11 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 
 ## Updates
 
+- **2026-05-12**: SUCCESS - Storage persistence working!
+  - Successfully tested `localStorage` and `IndexedDB` persistence.
+  - Implemented per-game isolation by configuring `QWebEngineProfile` to use `.storage/<slugified-hostname>` as the persistent storage path.
+  - Game saves will now survive reboots and be properly isolated from one another.
+
 - **2026-05-12**: SUCCESS - Web Audio API working!
   - Successfully tested the Web Audio API using an oscillator node.
   - Audio routes correctly through the device's PulseAudio daemon.

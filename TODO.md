@@ -7,7 +7,7 @@
 **QtWebEngine / EGLFS Tasks:**
 - [x] Test performance with a basic CSS + emojis translate animation demo in QtWebEngine
 - [x] Implement gamepad input handling in the PyQt5 application (Resolved: Native HTML5 Gamepad API works if `QTWEBENGINE_DISABLE_SANDBOX=1` is set)
-- [ ] Set up and test `localStorage` and `IndexedDB` persistence. (Plan: isolate each game on its own `gameid.localhost:8000` domain).
+- [x] Set up and test `localStorage` and `IndexedDB` persistence. (Implemented via `.storage/slugified-hostname` profiles).
 - [ ] Test WebAssembly (Wasm) support and document limitations (Chromium 69).
 - [ ] Test basic Nostr WebCrypto (`window.crypto.subtle`) and WebSocket connections (using `relay.mccormick.cx`).
 - [ ] Investigate Gamepad mapping: test how far off "standard" it is, and implement a JS polyfill (or OS-level Linux remap).
