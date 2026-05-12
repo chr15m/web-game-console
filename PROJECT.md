@@ -232,6 +232,33 @@ The R36S has the following input devices:
 **Other:**
 - Supports force feedback (FF_RUMBLE)
 
+#### HTML5 Gamepad API Mapping
+
+When accessed via `navigator.getGamepads()` in Chromium 69 with the sandbox disabled, the controller reports `mapping: ""` and uses the following indices:
+
+**Buttons (`gamepad.buttons[index]`):**
+*   `0`: B
+*   `1`: A
+*   `2`: X
+*   `3`: Y (Convention: use as 'Back')
+*   `4`: L1 (Outer Left Shoulder)
+*   `5`: R1 (Outer Right Shoulder)
+*   `6`: L2 (Inner Left Shoulder)
+*   `7`: R2 (Inner Right Shoulder)
+*   `8`: D-Pad Up
+*   `9`: D-Pad Down
+*   `10`: D-Pad Left
+*   `11`: D-Pad Right
+*   `12`: Select (Convention: use as 'Back')
+*   `13`: Start (Convention: use as 'Back')
+*   `14`: L3 (Left Stick Click)
+*   `15`: R3 (Right Stick Click)
+*   `16`: Special/Fn button (Convention: use as 'Back')
+
+**Axes (`gamepad.axes[index]`):**
+*   `0`: Left Stick X (Horizontal)
+*   `1`: Left Stick Y (Vertical)
+
 #### Testing Input
 
 Use `evtest` to monitor input events:
