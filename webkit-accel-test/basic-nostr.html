@@ -35,12 +35,11 @@
         document.body.focus();
 
         let ws;
-        let subId = "test-sub-" + Math.random().toString(36).substring(2, 8);
         let timeoutId;
-        let eventReceived = false;
 
         function connectAndFetch() {
-            if (eventReceived) return;
+            let subId = "test-sub-" + Math.random().toString(36).substring(2, 8);
+            let eventReceived = false;
             
             document.getElementById('status').textContent = "Connecting to wss://relay.mccormick.cx...";
             document.getElementById('status').style.color = "yellow";
@@ -59,7 +58,6 @@
                         document.getElementById('status').textContent = "Timeout waiting for event. Retrying...";
                         document.getElementById('status').style.color = "orange";
                         ws.close();
-                        setTimeout(connectAndFetch, 1000);
                     }
                 }, 5000);
             };
@@ -86,10 +84,8 @@
             };
             
             ws.onclose = () => {
-                if (!eventReceived) {
-                    clearTimeout(timeoutId);
-                    setTimeout(connectAndFetch, 1000);
-                }
+                clearTimeout(timeoutId);
+                setTimeout(connectAndFetch, 1000);
             };
         }
 
