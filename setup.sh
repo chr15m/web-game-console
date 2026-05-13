@@ -61,42 +61,46 @@ else
     echo "Apt cache is fresh (less than 30 days old), skipping update."
 fi
 
-echo "Ensuring xorg is installed..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y xorg"
+echo "Ensuring PyQt5 WebEngine is installed..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y python3-pyqt5.qtwebengine"
 
-echo "Installing Mali driver..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/driver/mali_drv.so" ark@$HOST:/tmp/
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/driver/99-mali.conf" ark@$HOST:/tmp/
-ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/mali_drv.so /usr/lib/xorg/modules/drivers/ && \
-    sudo mkdir -p /etc/X11/xorg.conf.d && \
-    sudo cp /tmp/99-mali.conf /etc/X11/xorg.conf.d/ && \
-    sudo cp /tmp/99-mali.conf /usr/share/X11/xorg.conf.d/"
+echo "Enabling SSH to start on boot..."
+ssh $SSH_OPTS ark@$HOST "sudo systemctl enable ssh"
 
-echo "Configuring Xwrapper to allow non-root users..."
-ssh $SSH_OPTS ark@$HOST "echo 'allowed_users=anybody' | sudo tee /etc/X11/Xwrapper.config > /dev/null"
+echo "Copying web console files..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/browser.py" ark@$HOST:/home/ark/
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/launch-browser.sh" ark@$HOST:/home/ark/
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/"*.html ark@$HOST:/home/ark/
 
-echo "Installing surf browser..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y surf"
+echo "Installing web-console service..."
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/web-console.service" ark@$HOST:/tmp/
+ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/web-console.service /etc/systemd/system/ && sudo systemctl daemon-reload"
 
-echo "Installing matchbox window manager..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y matchbox-window-manager"
+echo "Disabling EmulationStation and enabling Web Console..."
+ssh $SSH_OPTS ark@$HOST "sudo systemctl disable emulationstation && sudo systemctl enable web-console"
 
-echo "Installing unclutter..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y unclutter"
+echo "Disabling GDM3 to speed up boot and free memory..."
+ssh $SSH_OPTS ark@$HOST "sudo systemctl disable gdm3 gdm display-manager || true"
+ssh $SSH_OPTS ark@$HOST "sudo rm -f /etc/systemd/system/display-manager.service"
+ssh $SSH_OPTS ark@$HOST "sudo systemctl mask gdm3 gdm display-manager || true"
 
-echo "Installing xdotool..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y xdotool"
+if [ -f "$SCRIPT_DIR/splash.svg" ]; then
+    echo "Converting splash.svg to logo.png..."
+    if command -v rsvg-convert >/dev/null 2>&1; then
+        rsvg-convert -w 720 -h 720 -b black "$SCRIPT_DIR/splash.svg" -o /tmp/logo.png
+    elif command -v convert >/dev/null 2>&1; then
+        convert -background black -resize 720x720\! "$SCRIPT_DIR/splash.svg" /tmp/logo.png
+    else
+        echo "Warning: rsvg-convert or convert not found. Skipping splash screen update."
+    fi
 
-echo "Copying index.html..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/index.html" ark@$HOST:/home/ark/
-
-echo "Copying xinitrc..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/xinitrc" ark@$HOST:/home/ark/.xinitrc
-
-echo "Copying launch.sh..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/launch.sh" ark@$HOST:/home/ark/
-
-echo "Copying joy-keys-hack.sh..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/joy-keys-hack.sh" ark@$HOST:/home/ark/
+    if [ -f /tmp/logo.png ]; then
+        echo "Backing up and uploading new boot logo..."
+        ssh $SSH_OPTS ark@$HOST "sudo cp /boot/logo.png /boot/logo.png.bak 2>/dev/null || true"
+        rsync -e "ssh $SSH_OPTS" --checksum /tmp/logo.png ark@$HOST:/tmp/logo.png
+        ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/logo.png /boot/logo.png && sudo rm /tmp/logo.png"
+        rm -f /tmp/logo.png
+    fi
+fi
 
 echo "Done."

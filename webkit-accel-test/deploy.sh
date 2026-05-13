@@ -9,4 +9,4 @@ scp browser.py launch-browser.sh *.html $USER@$IP:/home/ark/
 
 echo "Launching on device..."
 echo "Remote debugging will be available at http://localhost:9222"
-ssh -L 9222:localhost:9222 $USER@$IP "chmod +x /home/ark/launch-browser.sh && /home/ark/launch-browser.sh"
+ssh -L 9222:localhost:9222 $USER@$IP "sudo systemctl restart web-console && echo 'Web console restarted. Press Ctrl+C to close tunnel.' && sleep infinity"

@@ -1,5 +1,4 @@
 **QtWebEngine / EGLFS Tasks:**
-- [ ] Boot straight into our demo instead of emulationstation
 - [ ] Test basic Nostr WebCrypto (`window.crypto.subtle`) and WebSocket connections (using `relay.mccormick.cx`).
 
 - [ ] Provide a way to configure wifi, either the original emustation TUI or a localhost API with web UI.
@@ -7,8 +6,6 @@
 - [ ] Test memory limits and OOM behavior and document. Ensure developers can easily profile this via remote debugging.
 - [ ] Test HTML5 `<video>` software decoding performance and document caveats.
 - [ ] Test WebAssembly (Wasm) support and document limitations (Chromium 69).
-
-- [ ] Some way of "uninstalling" getting back to emustation without network access in case we brick
 
 # Paused
 
@@ -23,6 +20,9 @@
 # Done
 
 **QtWebEngine / EGLFS Tasks:**
+- [x] Replace the existing splash image.
+- [x] Boot straight into our demo instead of emulationstation
+- [x] Some way of "uninstalling" getting back to emustation without network access in case we brick
 - [x] Figure out how to do 'Enable remote services' (from emulationstation), or enable SSH
 - [x] Run `strace -e trace=ioctl` on EmulationStation via `openvt` on `tty1` to capture DRM/KMS ioctl calls to `/dev/dri/card0`
 - [x] Compare EmulationStation strace output with SDL2 Python test output to find the missing display initialization step

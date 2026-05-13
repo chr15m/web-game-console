@@ -351,6 +351,12 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
 
 ## Updates
 
+- **2026-05-13**: SUCCESS - Booting straight to Web Console!
+  - Replaced EmulationStation with a custom `web-console.service` systemd unit.
+  - Configured the service to attach to `/dev/tty1` to acquire DRM master rights.
+  - Permanently enabled SSH on boot via `systemctl enable ssh`.
+  - Fixed a 1-minute boot delay by forcefully masking `gdm3` and `display-manager`, preventing them from stealing the DRM master lock.
+
 - **2026-05-12**: SUCCESS - Storage persistence working!
   - Successfully tested `localStorage` and `IndexedDB` persistence.
   - Implemented per-game isolation by configuring `QWebEngineProfile` to use `.storage/<slugified-hostname>` as the persistent storage path.
