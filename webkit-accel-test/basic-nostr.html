@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Nostr Test</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        h1 { color: lime; margin-top: 0; }
+        #status { font-size: 1.5em; color: yellow; margin-bottom: 20px; }
+        pre {
+            background: #111;
+            padding: 15px;
+            border-radius: 5px;
+            overflow: auto;
+            font-size: 1.1em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+        }
+        .instructions { margin-top: 20px; color: #888; font-size: 1.2em; }
+    </style>
+</head>
+<body tabindex="0">
+    <h1>Nostr WebSocket Test</h1>
+    <div id="status">Initializing...</div>
+    <pre id="output">Waiting for event...</pre>
+    <div class="instructions">Press Y / Select / Start to return to menu.</div>
+
+    <script>
+        document.body.focus();
+
+        let ws;
+        let subId = "test-sub-" + Math.random().toString(36).substring(2, 8);
+        let timeoutId;
+        let eventReceived = false;
+
+        function connectAndFetch() {
+            if (eventReceived) return;
+            
+            document.getElementById('status').textContent = "Connecting to wss://relay.mccormick.cx...";
+            document.getElementById('status').style.color = "yellow";
+            
+            ws = new WebSocket('wss://relay.mccormick.cx');
+            
+            ws.onopen = () => {
+                document.getElementById('status').textContent = "Connected. Sending REQ...";
+                const req = ["REQ", subId, { limit: 1 }];
+                ws.send(JSON.stringify(req));
+                
+                // Set a timeout to retry if we don't get an event
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    if (!eventReceived) {
+                        document.getElementById('status').textContent = "Timeout waiting for event. Retrying...";
+                        document.getElementById('status').style.color = "orange";
+                        ws.close();
+                        setTimeout(connectAndFetch, 1000);
+                    }
+                }, 5000);
+            };
+            
+            ws.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data[0] === "EVENT" && data[1] === subId) {
+                        eventReceived = true;
+                        clearTimeout(timeoutId);
+                        document.getElementById('status').textContent = "Event received!";
+                        document.getElementById('status').style.color = "lime";
+                        document.getElementById('output').textContent = JSON.stringify(data[2], null, 2);
+                        ws.close();
+                    }
+                } catch (err) {
+                    console.error("Failed to parse message", err);
+                }
+            };
+            
+            ws.onerror = (err) => {
+                document.getElementById('status').textContent = "WebSocket error. Retrying...";
+                document.getElementById('status').style.color = "red";
+            };
+            
+            ws.onclose = () => {
+                if (!eventReceived) {
+                    clearTimeout(timeoutId);
+                    setTimeout(connectAndFetch, 1000);
+                }
+            };
+        }
+
+        // Start the Nostr fetch loop
+        connectAndFetch();
+
+        // Gamepad polling to exit
+        function pollGamepad() {
+            const pads = navigator.getGamepads();
+            const gp = pads[0];
+            
+            // Check for "back" button (Left/Y=2, Select=8, Start=9, Special=16)
+            if (gp && [2, 8, 9, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+                if (ws) ws.close();
+                window.location.href = 'index.html';
+                return;
+            }
+            requestAnimationFrame(pollGamepad);
+        }
+        pollGamepad();
+    </script>
+</body>
+</html>
