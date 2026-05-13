@@ -1,0 +1,23 @@
+[Unit]
+Description=R36S Web Console
+After=firstboot.service play-video.service network.target
+Wants=play-video.service
+
+[Service]
+Type=simple
+User=ark
+WorkingDirectory=/home/ark
+Environment="TERM=linux"
+Environment="XDG_RUNTIME_DIR=/run/user/%U"
+Environment="QT_QPA_PLATFORM=eglfs"
+Environment="PYTHONUNBUFFERED=1"
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/tty1
+ExecStartPre=+/bin/chmod 666 /dev/tty1
+ExecStart=/usr/bin/python3 /home/ark/browser.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
