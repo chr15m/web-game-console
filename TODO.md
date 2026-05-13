@@ -1,5 +1,5 @@
 **QtWebEngine / EGLFS Tasks:**
-- [ ] Test basic Nostr WebCrypto (`window.crypto.subtle`) and WebSocket connections (using `relay.mccormick.cx`).
+- [ ] Do a basic Nostr receive to get a game on there.
 
 - [ ] Provide a way to configure wifi, either the original emustation TUI or a localhost API with web UI.
 
@@ -20,6 +20,7 @@
 # Done
 
 **QtWebEngine / EGLFS Tasks:**
+- [x] Test basic Nostr WebCrypto (`window.crypto.subtle`) and WebSocket connections (using `relay.mccormick.cx`).
 - [x] Replace the existing splash image.
 - [x] Boot straight into our demo instead of emulationstation
 - [x] Some way of "uninstalling" getting back to emustation without network access in case we brick

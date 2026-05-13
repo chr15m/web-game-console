@@ -356,6 +356,7 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceler
   - Configured the service to attach to `/dev/tty1` to acquire DRM master rights.
   - Permanently enabled SSH on boot via `systemctl enable ssh`.
   - Fixed a 1-minute boot delay by forcefully masking `gdm3` and `display-manager`, preventing them from stealing the DRM master lock.
+  - Successfully tested Nostr WebSocket connections to `relay.mccormick.cx` and verified continuous event fetching.
 
 - **2026-05-12**: SUCCESS - Storage persistence working!
   - Successfully tested `localStorage` and `IndexedDB` persistence.
