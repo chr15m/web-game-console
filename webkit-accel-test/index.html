@@ -80,9 +80,9 @@
                 // Axis navigation (Left Stick Y is usually axis 1)
                 const axisY = gp.axes[1] || 0;
                 
-                // D-Pad buttons (8=Up, 9=Down on R36S)
-                const dpadUp = gp.buttons.length > 8 ? gp.buttons[8].pressed : false;
-                const dpadDown = gp.buttons.length > 9 ? gp.buttons[9].pressed : false;
+                // D-Pad buttons (12=Up, 13=Down on Standard)
+                const dpadUp = gp.buttons.length > 12 ? gp.buttons[12].pressed : false;
+                const dpadDown = gp.buttons.length > 13 ? gp.buttons[13].pressed : false;
 
                 if ((axisY > 0.5 || dpadDown) && lastAxisY <= 0.5 && !lastDpadDown) {
                     selectedIndex = (selectedIndex + 1) % items.length;
@@ -96,8 +96,8 @@
                 lastDpadUp = dpadUp;
                 lastDpadDown = dpadDown;
 
-                // Button press (A=1, B=0, X=2)
-                const buttonPressed = [0, 1, 2].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed);
+                // Button press (A=1, B=0, X=3)
+                const buttonPressed = [0, 1, 3].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed);
                 if (buttonPressed && !lastButtonPress) {
                     window.location.href = items[selectedIndex].getAttribute('data-href');
                     return; // Stop polling to prevent double triggers during navigation

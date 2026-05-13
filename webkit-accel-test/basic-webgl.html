@@ -180,8 +180,8 @@
       function pollGamepad() {
         const pads = navigator.getGamepads();
         const gp = pads[0];
-        // Check for "back" button (Y=3, Select=12, Start=13, Special=16)
-        if (gp && [3, 12, 13, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+        // Check for "back" button (Left/Y=2, Select=8, Start=9, Special=16)
+        if (gp && [2, 8, 9, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
             window.location.href = 'index.html';
             return;
         }

@@ -100,8 +100,8 @@
                 if (audioCtx.state === 'suspended') audioCtx.resume();
             }
 
-            // Exit to menu (Y=3, Select=12, Start=13, Special=16)
-            if ([3, 12, 13, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
+            // Exit to menu (Left/Y=2, Select=8, Start=9, Special=16)
+            if ([2, 8, 9, 16].some(idx => gp.buttons[idx] && gp.buttons[idx].pressed)) {
                 window.location.href = 'index.html';
                 return;
             }
@@ -109,8 +109,8 @@
             // Movement
             let moveX = 0;
             const axisX = gp.axes[0] || 0;
-            const dpadLeft = gp.buttons.length > 10 ? gp.buttons[10].pressed : false;
-            const dpadRight = gp.buttons.length > 11 ? gp.buttons[11].pressed : false;
+            const dpadLeft = gp.buttons.length > 14 ? gp.buttons[14].pressed : false;
+            const dpadRight = gp.buttons.length > 15 ? gp.buttons[15].pressed : false;
 
             if (axisX < -0.5 || dpadLeft) moveX = -1;
             if (axisX > 0.5 || dpadRight) moveX = 1;
