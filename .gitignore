@@ -1,0 +1,5 @@
+.aider*
+.context*
+.envrc
+*.gz
+*.xz
