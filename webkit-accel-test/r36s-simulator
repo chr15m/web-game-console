@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""
+Desktop development shim for the R36S web console.
+
+Opens a Chromium window at 720x720 (R36S resolution) with:
+  - DevTools auto-opened
+  - A keyboard-to-gamepad shim injected into all served pages
+  - Local files served from the webkit-accel-test directory
+
+Keyboard mappings (standard W3C gamepad layout):
+  Arrow Keys / WASD    D-Pad / Left Stick
+  Z / X                B / A buttons
+  Space                A button
+  C / V                Y / X buttons
+  Enter                Start
+  Backspace            Select
+  Escape               Special
+  Q/E                  L1/R1
+  1/3                  L2/R2
+  R/T                  L3 (stick click) / R3
+"""
+
+import os
+import sys
+import subprocess
+import threading
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+PORT = 8168
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+# Keyboard-to-gamepad shim injected into every HTML page served
+# Maps desktop keyboard keys to the HTML5 Gamepad API so R36S test
+# pages work on a laptop without a physical gamepad connected.
+SHIM_SCRIPT = r"""
+(function() {
+    'use strict';
+
+    var buttons = [];
+    for (var i = 0; i < 17; i++) {
+        buttons.push({ pressed: false, touched: false, value: 0 });
+    }
+
+    var state = {
+        buttons: buttons,
+        axes: [0, 0, 0, 0],
+        connected: true,
+        id: 'R36S Keyboard Shim (desktop)',
+        index: 0,
+        mapping: 'standard',
+        timestamp: performance.now()
+    };
+
+    /* Standard W3C Gamepad mapping (after browser.py polyfill):
+       0 B (bottom)     1 A (right)      2 Y (left)      3 X (top)
+       4 L1             5 R1              6 L2            7 R2
+       8 Select         9 Start          10 L3           11 R3
+      12 D-Pad Up      13 D-Pad Down     14 D-Pad Left   15 D-Pad Right
+      16 Special */
+    var keyMap = {
+        'ArrowUp':    12,   'w': 12,
+        'ArrowDown':  13,   's': 13,
+        'ArrowLeft':  14,   'a': 14,
+        'ArrowRight': 15,   'd': 15,
+        'W': 12, 'S': 13, 'A': 14, 'D': 15,
+        'z':  0,  'x':  1,  'c':  2,  'v':  3,
+        ' ':  1,
+        'q':  4,  'e':  5,  '1':  6,  '3':  7,
+        'Enter':     9,  'Backspace': 8,
+        'Escape':   16,
+        'r': 10,  't': 11
+    };
+
+    function setBtn(idx, pressed) {
+        var b = state.buttons[idx];
+        if (!b) return;
+        b.pressed = pressed;
+        b.value = pressed ? 1 : 0;
+    }
+
+    document.addEventListener('keydown', function(e) {
+        console.log('DEBUG: Shim keydown:', e.key);
+        var idx = keyMap[e.key];
+        if (idx !== undefined) {
+            setBtn(idx, true);
+        }
+
+        // Axes from arrow keys / WASD
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') state.axes[1] = -1;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') state.axes[1] = 1;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') state.axes[0] = -1;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') state.axes[0] = 1;
+    });
+
+    document.addEventListener('keyup', function(e) {
+        var idx = keyMap[e.key];
+        if (idx !== undefined) {
+            setBtn(idx, false);
+        }
+
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') state.axes[1] = 0;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') state.axes[1] = 0;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') state.axes[0] = 0;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') state.axes[0] = 0;
+    });
+
+    /* Override getGamepads to inject our fake gamepad.
+       We keep the original so real gamepads still work. */
+    var origGetGamepads = navigator.getGamepads.bind(navigator);
+    navigator.getGamepads = function() {
+        state.timestamp = performance.now();
+        var pads = origGetGamepads();
+        var res = [];
+        if (pads) {
+            for (var i = 0; i < pads.length; i++) res.push(pads[i]);
+        }
+        if (res.length === 0) res.push(state);
+        else res[0] = state;
+        return res;
+    };
+
+    /* Fire gamepadconnected in case pages listen for it.
+       The basic-gamepad.html test listens for this event. */
+    function fireConnected() {
+        var ev = new Event('gamepadconnected');
+        ev.gamepad = state;
+        window.dispatchEvent(ev);
+    }
+    fireConnected();
+    setInterval(fireConnected, 3000);
+
+    console.log('[R36S Shim] Keyboard-to-gamepad shim installed.');
+})();
+"""  # noqa
+
+
+class InjectingHandler(SimpleHTTPRequestHandler):
+    """HTTP handler that injects the keyboard shim into HTML pages."""
+
+    def log_message(self, format, *args):
+        pass
+
+    def translate_path(self, path):
+        import posixpath, urllib.parse
+        path = urllib.parse.unquote(path.split('?', 1)[0].split('#', 1)[0])
+        path = posixpath.normpath(path)
+        parts = [p for p in path.split('/') if p and p != '..']
+        result = SCRIPT_DIR
+        for part in parts:
+            result = os.path.join(result, part)
+        return result
+
+    def do_GET(self):
+        path = self.translate_path(self.path)
+
+        if path.endswith('.html') and os.path.isfile(path):
+            with open(path, 'r') as f:
+                content = f.read()
+
+            tag = '<script>%s</script>' % SHIM_SCRIPT
+            if '</head>' in content:
+                content = content.replace('</head>', tag + '</head>')
+            elif '</body>' in content:
+                content = content.replace('</body>', tag + '</body>')
+            else:
+                content += tag
+
+            data = content.encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', len(data))
+            self.end_headers()
+            self.wfile.write(data)
+        else:
+            super().do_GET()
+
+
+def find_browser():
+    browser = os.environ.get('BROWSER', '')
+    if any(k in browser for k in ('chrome', 'chromium', 'edge')):
+        return browser
+
+    for cmd in ('google-chrome', 'chromium', 'chromium-browser',
+                'microsoft-edge', 'google-chrome-stable'):
+        if subprocess.run(['which', cmd], capture_output=True).returncode == 0:
+            return cmd
+
+    mac_paths = [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    ]
+    for p in mac_paths:
+        if os.path.isfile(p):
+            return p
+
+    # WSL
+    win = '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+    if os.path.isfile(win):
+        return win
+
+    return None
+
+
+def start_server():
+    server = HTTPServer(('localhost', PORT), InjectingHandler)
+    print('  http://localhost:%d/' % PORT)
+    server.serve_forever()
+
+
+def main():
+    browser = find_browser()
+    if not browser:
+        print('Error: No Chromium-based browser found.', file=sys.stderr)
+        print('Install Google Chrome, Chromium, or Microsoft Edge.',
+              file=sys.stderr)
+        sys.exit(1)
+
+    # Start local HTTP server
+    t = threading.Thread(target=start_server, daemon=True)
+    t.start()
+
+    url = 'http://localhost:%d/index.html' % PORT
+    user_dir = os.path.join(SCRIPT_DIR, '.r36s-shim-chrome-data')
+    os.makedirs(user_dir, exist_ok=True)
+
+    print('R36S Desktop Shim')
+    print('=' * 60)
+    print('Opening %s' % url)
+    print('')
+    print('Keyboard mappings:')
+    print('  Arrow Keys / WASD     D-Pad / Left Stick')
+    print('  Z / X / Space         B / A')
+    print('  C / V                 Y / X')
+    print('  Q / E                  L1 / R1')
+    print('  1 / 3                  L2 / R2')
+    print('  Enter / Backspace      Start / Select')
+    print('  R / T                  L3 / R3')
+    print('  Escape                Special')
+    print('')
+    print('DevTools should open automatically.')
+    print('Close the window to stop the server.')
+
+    process = subprocess.Popen([
+        browser,
+        '--user-data-dir=' + user_dir,
+        '--window-size=720,720',
+        '--force-device-scale-factor=1',
+        '--app=' + url,
+        '--auto-open-devtools-for-tabs',
+        '--no-first-run',
+        '--disable-web-security',
+        '--test-type',
+        '--enable-logging=stderr',
+        '--v=1',
+    ], stderr=subprocess.PIPE, text=True)
+
+    try:
+        for line in process.stderr:
+            if 'CONSOLE' in line:
+                print(line.strip())
+    except KeyboardInterrupt:
+        process.terminate()
+
+    process.wait()
+    print('Server stopped.')
+
+
+if __name__ == '__main__':
+    main()
