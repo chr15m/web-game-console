@@ -3,4 +3,6 @@
 .envrc
 *.gz
 *.xz
+.storage
+.*-chrome-data
 workspace
