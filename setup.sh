@@ -84,12 +84,12 @@ ssh $SSH_OPTS ark@$HOST "sudo systemctl disable gdm3 gdm display-manager || true
 ssh $SSH_OPTS ark@$HOST "sudo rm -f /etc/systemd/system/display-manager.service"
 ssh $SSH_OPTS ark@$HOST "sudo systemctl mask gdm3 gdm display-manager || true"
 
-if [ -f "$SCRIPT_DIR/splash.svg" ]; then
+if [ -f "$SCRIPT_DIR/assets/splash.svg" ]; then
     echo "Converting splash.svg to logo.png..."
     if command -v rsvg-convert >/dev/null 2>&1; then
-        rsvg-convert -w 720 -h 720 -b black "$SCRIPT_DIR/splash.svg" -o /tmp/logo.png
+        rsvg-convert -w 720 -h 720 -b black "$SCRIPT_DIR/assets/splash.svg" -o /tmp/logo.png
     elif command -v convert >/dev/null 2>&1; then
-        convert -background black -resize 720x720\! "$SCRIPT_DIR/splash.svg" /tmp/logo.png
+        convert -background black -resize 720x720\! "$SCRIPT_DIR/assets/splash.svg" /tmp/logo.png
     else
         echo "Warning: rsvg-convert or convert not found. Skipping splash screen update."
     fi
