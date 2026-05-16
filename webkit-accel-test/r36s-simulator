@@ -24,10 +24,13 @@ import os
 import sys
 import subprocess
 import threading
+import urllib.parse
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 PORT = 8168
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SERVE_DIR = SCRIPT_DIR
+TARGET_FILE = 'index.html'
 
 # Keyboard-to-gamepad shim injected into every HTML page served
 # Maps desktop keyboard keys to the HTML5 Gamepad API so R36S test
@@ -141,11 +144,11 @@ class InjectingHandler(SimpleHTTPRequestHandler):
         pass
 
     def translate_path(self, path):
-        import posixpath, urllib.parse
+        import posixpath
         path = urllib.parse.unquote(path.split('?', 1)[0].split('#', 1)[0])
         path = posixpath.normpath(path)
         parts = [p for p in path.split('/') if p and p != '..']
-        result = SCRIPT_DIR
+        result = SERVE_DIR
         for part in parts:
             result = os.path.join(result, part)
         return result
@@ -208,6 +211,17 @@ def start_server():
 
 
 def main():
+    global SERVE_DIR, TARGET_FILE
+    if len(sys.argv) > 1:
+        target_path = os.path.abspath(sys.argv[1])
+        if not os.path.isfile(target_path):
+            print(f"Error: File not found: {target_path}", file=sys.stderr)
+            sys.exit(1)
+        SERVE_DIR = os.path.dirname(target_path)
+        TARGET_FILE = os.path.basename(target_path)
+
+    os.chdir(SERVE_DIR)
+
     browser = find_browser()
     if not browser:
         print('Error: No Chromium-based browser found.', file=sys.stderr)
@@ -219,7 +233,7 @@ def main():
     t = threading.Thread(target=start_server, daemon=True)
     t.start()
 
-    url = 'http://localhost:%d/index.html' % PORT
+    url = 'http://localhost:%d/%s' % (PORT, urllib.parse.quote(TARGET_FILE))
     user_dir = os.path.join(SCRIPT_DIR, '.r36s-shim-chrome-data')
     os.makedirs(user_dir, exist_ok=True)
 
