@@ -61,8 +61,8 @@ else
     echo "Apt cache is fresh (less than 30 days old), skipping update."
 fi
 
-echo "Ensuring PyQt5 WebEngine is installed..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y python3-pyqt5.qtwebengine"
+echo "Ensuring PyQt5 WebEngine and Emoji fonts are installed..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y python3-pyqt5.qtwebengine fonts-noto-color-emoji"
 
 echo "Enabling SSH to start on boot..."
 ssh $SSH_OPTS ark@$HOST "sudo systemctl enable ssh"
