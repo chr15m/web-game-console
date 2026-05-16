@@ -279,13 +279,13 @@
                         console.log(`[Nostr] Parsed EVENT:`, event);
                         const saltTag = event.tags.find(t => t[0] === 'wgc_m');
                         if (saltTag) {
+                            fetchedEvent = event;
                             const salt = parseInt(saltTag[1], 10);
                             console.log(`[Nostr] Found salt: ${salt}, verifying game code...`);
                             const fullCodeEmojis = await verifyGameCode(event.pubkey, salt);
                             console.log(`[Nostr] Verified full code emojis:`, fullCodeEmojis.join(''));
                             
                             mockMatchData = fullCodeEmojis.map(emoji => SYMBOLS.indexOf(emoji));
-                            fetchedEvent = event;
                             gamecodeFocus = 'match';
                             document.getElementById('gamecode-title').textContent = "Game Found!";
                             updateGridUI();
