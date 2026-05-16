@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Load Game</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* Grid UI Styles */
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 680px;
+            margin: 20px auto;
+        }
+        #picker-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 360px;
+            margin: 20px auto;
+        }
+        .grid-cell, .picker-cell {
+            width: 70px;
+            height: 70px;
+            background: #333;
+            border: 3px solid #555;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            cursor: pointer;
+        }
+        .grid-cell.highlight {
+            border-color: #0a0;
+            background: #131;
+        }
+        .grid-cell.active, .picker-cell.active {
+            border-color: lime;
+            background: #444;
+        }
+        #match-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 3px solid transparent;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #222;
+        }
+        #match-container.active {
+            border-color: lime;
+            background: #333;
+        }
+        #match-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+        }
+        .match-cell {
+            width: 40px;
+            height: 40px;
+            background: #111;
+            border: 2px solid #444;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        #instructions {
+            margin-top: 50px;
+            color: #888;
+            font-size: 1.2em;
+        }
+        #game-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            z-index: 9999;
+            background: #000;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="gamepad.js"></script>
+</head>
+<body tabindex="0">
+    <div id="gamecode-screen">
+        <h2 id="gamecode-title">Enter Game Code</h2>
+        <div id="grid-container"></div>
+        <div id="picker-container" class="hidden"></div>
+        <div id="match-container" class="hidden">
+            <h3 style="margin: 0 0 10px 0;">Matching Game Found:</h3>
+            <div id="match-grid"></div>
+            <div style="margin-top: 10px; color: lime;">Press A/X to Play</div>
+        </div>
+    </div>
+
+    <div id="instructions">Use D-Pad / Left Stick to navigate.<br>Press A/X to select.<br>Press Y to go Home.</div>
+
+    <iframe id="game-iframe" class="hidden" sandbox="allow-scripts"></iframe>
+
+    <script>
+        document.body.focus();
+
+        const SYMBOLS = ['🌟', '🍄', '🔥', '💧', '💎', '🍌', '🍎', '🍀', '👻', '💀', '👽', '🤖', '💣', '🔔', '💙', '🌙'];
+        let currentScreen = 'gamecode'; // gamecode, picker, playing
+        
+        // Grid state
+        let gridCursor = { x: 0, y: 0 };
+        let pickerCursor = { x: 0, y: 0 };
+        let gridData = Array(16).fill(-1);
+        let mockMatchData = null;
+        let gamecodeFocus = 'grid'; // 'grid' or 'match'
+        let fetching = false;
+        let fetchedEvent = null;
+        let ws = null;
+
+        async function verifyGameCode(pkHex, saltNum) {
+            const pkBytes = new Uint8Array(pkHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const saltBytes = new Uint8Array(4);
+            new DataView(saltBytes.buffer).setUint32(0, saltNum, true);
+            
+            const concatBytes = new Uint8Array(pkBytes.length + 4);
+            concatBytes.set(pkBytes, 0);
+            concatBytes.set(saltBytes, pkBytes.length);
+            
+            const hashBuffer = await crypto.subtle.digest("SHA-256", concatBytes);
+            const hashArray = new Uint8Array(hashBuffer);
+            const codeBytes = hashArray.slice(0, 8);
+            
+            let emojis = [];
+            for (let b of codeBytes) {
+                emojis.push(SYMBOLS[b >> 4]);
+                emojis.push(SYMBOLS[b & 0x0F]);
+            }
+            return emojis;
+        }
+
+        function fetchGame(wgc5) {
+            if (fetching) return;
+            fetching = true;
+            document.getElementById('gamecode-title').innerHTML = "Searching Nostr... <div class='spinner'></div>";
+            
+            if (ws) ws.close();
+            ws = new WebSocket('wss://relay.mccormick.cx');
+            
+            ws.onopen = () => {
+                const subId = "wgc-" + Math.random().toString(36).substring(2);
+                const req = ["REQ", subId, { kinds: [30078], "#t": ["wgc5-" + wgc5], limit: 1 }];
+                ws.send(JSON.stringify(req));
+            };
+            
+            ws.onmessage = async (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data[0] === "EVENT") {
+                        const event = data[2];
+                        const saltTag = event.tags.find(t => t[0] === 'wgc_m');
+                        if (saltTag) {
+                            fetchedEvent = event;
+                            const salt = parseInt(saltTag[1], 10);
+                            const fullCodeEmojis = await verifyGameCode(event.pubkey, salt);
+                            
+                            mockMatchData = fullCodeEmojis.map(emoji => SYMBOLS.indexOf(emoji));
+                            gamecodeFocus = 'match';
+                            document.getElementById('gamecode-title').textContent = "Game Found!";
+                            updateGridUI();
+                        }
+                        ws.close();
+                    } else if (data[0] === "EOSE") {
+                        if (!fetchedEvent) {
+                            document.getElementById('gamecode-title').textContent = "Not Found";
+                            setTimeout(() => {
+                                if (currentScreen === 'gamecode' && !fetchedEvent) {
+                                    document.getElementById('gamecode-title').textContent = "Enter Game Code";
+                                    gridData.fill(-1);
+                                    gridCursor = {x:0, y:0};
+                                    updateGridUI();
+                                }
+                            }, 2000);
+                        }
+                        ws.close();
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+            
+            ws.onclose = () => { fetching = false; };
+            ws.onerror = () => { 
+                fetching = false; 
+                document.getElementById('gamecode-title').textContent = "Network Error";
+            };
+        }
+
+        async function launchGame(base64Zip) {
+            document.getElementById('gamecode-title').innerHTML = "Loading... <div class='spinner'></div>";
+            try {
+                const zip = new JSZip();
+                await zip.loadAsync(base64Zip, {base64: true});
+                
+                let indexFile = null;
+                zip.forEach((relativePath, file) => {
+                    if (relativePath.endsWith('index.html')) {
+                        indexFile = file;
+                    }
+                });
+                
+                if (!indexFile) throw new Error("No index.html found in bundle");
+                
+                const htmlContent = await indexFile.async("string");
+                const blob = new Blob([htmlContent], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                
+                const iframe = document.getElementById('game-iframe');
+                iframe.src = url;
+                iframe.classList.remove('hidden');
+                iframe.focus();
+                
+                currentScreen = 'playing';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('gamecode-title').textContent = "Error Loading Game";
+            }
+        }
+
+        function initGrid() {
+            const container = document.getElementById('grid-container');
+            if (container.children.length === 0) {
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    if (i < 5) cell.classList.add('highlight');
+                    cell.id = `cell-${i}`;
+                    container.appendChild(cell);
+                }
+            }
+            const pContainer = document.getElementById('picker-container');
+            if (pContainer.children.length === 0) {
+                for (let i = 0; i < 16; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'picker-cell';
+                    cell.id = `picker-${i}`;
+                    cell.textContent = SYMBOLS[i];
+                    pContainer.appendChild(cell);
+                }
+            }
+            updateGridUI();
+        }
+
+        function updateGridUI() {
+            const isPicker = currentScreen === 'picker';
+            document.getElementById('grid-container').classList.toggle('hidden', isPicker);
+            document.getElementById('picker-container').classList.toggle('hidden', !isPicker);
+            
+            if (!fetching && !fetchedEvent) {
+                document.getElementById('gamecode-title').textContent = isPicker ? "Select Symbol" : "Enter Game Code";
+            }
+
+            let first5Filled = true;
+            for (let i = 0; i < 5; i++) {
+                if (gridData[i] === -1) first5Filled = false;
+            }
+
+            if (first5Filled && !mockMatchData && !fetching && !fetchedEvent) {
+                const wgc5 = gridData.slice(0, 5).map(idx => SYMBOLS[idx]).join('');
+                fetchGame(wgc5);
+            } else if (!first5Filled) {
+                mockMatchData = null;
+                fetchedEvent = null;
+                if (gamecodeFocus === 'match') gamecodeFocus = 'grid';
+            }
+
+            const matchContainer = document.getElementById('match-container');
+            if (mockMatchData && !isPicker) {
+                matchContainer.classList.remove('hidden');
+                matchContainer.classList.toggle('active', gamecodeFocus === 'match');
+                const matchGrid = document.getElementById('match-grid');
+                if (matchGrid.children.length === 0) {
+                    for (let i = 0; i < 16; i++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'match-cell';
+                        matchGrid.appendChild(cell);
+                    }
+                }
+                for (let i = 0; i < 16; i++) {
+                    matchGrid.children[i].textContent = SYMBOLS[mockMatchData[i]];
+                }
+            } else {
+                matchContainer.classList.add('hidden');
+            }
+
+            for (let i = 0; i < 16; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                if (cell) {
+                    cell.textContent = gridData[i] === -1 ? '' : SYMBOLS[gridData[i]];
+                    cell.classList.toggle('active', !isPicker && gamecodeFocus === 'grid' && i === (gridCursor.y * 8 + gridCursor.x));
+                }
+            }
+            for (let i = 0; i < 16; i++) {
+                const pCell = document.getElementById(`picker-${i}`);
+                if (pCell) {
+                    pCell.classList.toggle('active', isPicker && i === (pickerCursor.y * 4 + pickerCursor.x));
+                }
+            }
+        }
+
+        function switchToScreen(screen) {
+            currentScreen = screen;
+            document.getElementById('gamecode-screen').classList.toggle('hidden', screen !== 'gamecode' && screen !== 'picker');
+            if (screen === 'gamecode' || screen === 'picker') initGrid();
+            updateGridUI();
+        }
+
+        function executeAction() {
+            if (currentScreen === 'gamecode') {
+                if (gamecodeFocus === 'match' && fetchedEvent) {
+                    launchGame(fetchedEvent.content);
+                } else {
+                    switchToScreen('picker');
+                }
+                return;
+            }
+            if (currentScreen === 'picker') {
+                const symbolIdx = pickerCursor.y * 4 + pickerCursor.x;
+                const gridIdx = gridCursor.y * 8 + gridCursor.x;
+                gridData[gridIdx] = symbolIdx;
+                
+                if (gridIdx < 15) {
+                    gridCursor.x = (gridIdx + 1) % 8;
+                    gridCursor.y = Math.floor((gridIdx + 1) / 8);
+                }
+                switchToScreen('gamecode');
+                return;
+            }
+        }
+
+        function handleBack() {
+            if (currentScreen === 'gamecode') {
+                if (gamecodeFocus === 'match') {
+                    gamecodeFocus = 'grid';
+                    updateGridUI();
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } else if (currentScreen === 'picker') {
+                switchToScreen('gamecode');
+            }
+        }
+
+        const gamepad = new GamepadInput({
+            onUp: () => {
+                if (currentScreen === 'gamecode') {
+                    if (gamecodeFocus === 'match') {
+                        gamecodeFocus = 'grid';
+                        gridCursor.y = 1;
+                    } else if (gamecodeFocus === 'grid') {
+                        if (gridCursor.y === 1) gridCursor.y = 0;
+                    }
+                    updateGridUI();
+                } else if (currentScreen === 'picker') {
+                    pickerCursor.y = (pickerCursor.y - 1 + 4) % 4;
+                    updateGridUI();
+                }
+            },
+            onDown: () => {
+                if (currentScreen === 'gamecode') {
+                    if (gamecodeFocus === 'grid') {
+                        if (gridCursor.y === 0) {
+                            gridCursor.y = 1;
+                        } else if (gridCursor.y === 1 && mockMatchData) {
+                            gamecodeFocus = 'match';
+                        }
+                    }
+                    updateGridUI();
+                } else if (currentScreen === 'picker') {
+                    pickerCursor.y = (pickerCursor.y + 1) % 4;
+                    updateGridUI();
+                }
+            },
+            onLeft: () => {
+                if (currentScreen === 'gamecode' && gamecodeFocus === 'grid') {
+                    gridCursor.x = (gridCursor.x - 1 + 8) % 8;
+                    updateGridUI();
+                } else if (currentScreen === 'picker') {
+                    pickerCursor.x = (pickerCursor.x - 1 + 4) % 4;
+                    updateGridUI();
+                }
+            },
+            onRight: () => {
+                if (currentScreen === 'gamecode' && gamecodeFocus === 'grid') {
+                    gridCursor.x = (gridCursor.x + 1) % 8;
+                    updateGridUI();
+                } else if (currentScreen === 'picker') {
+                    pickerCursor.x = (pickerCursor.x + 1) % 4;
+                    updateGridUI();
+                }
+            },
+            onAction: () => {
+                executeAction();
+            },
+            onBack: () => {
+                handleBack();
+            },
+            onHome: () => {
+                window.location.href = 'index.html';
+            },
+            onStartSelect: () => {
+                if (currentScreen === 'playing') {
+                    const iframe = document.getElementById('game-iframe');
+                    iframe.src = 'about:blank';
+                    iframe.classList.add('hidden');
+                    currentScreen = 'gamecode';
+                    document.body.focus();
+                }
+            }
+        });
+        gamepad.start();
+
+        initGrid();
+    </script>
+</body>
+</html>

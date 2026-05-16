@@ -70,7 +70,7 @@ ssh $SSH_OPTS ark@$HOST "sudo systemctl enable ssh"
 echo "Copying web console files..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/browser.py" ark@$HOST:/home/ark/
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/launch-browser.sh" ark@$HOST:/home/ark/
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/"*.html ark@$HOST:/home/ark/
+rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/"*.html "$SCRIPT_DIR/webkit-accel-test/"*.css "$SCRIPT_DIR/webkit-accel-test/"*.js ark@$HOST:/home/ark/
 
 echo "Installing web-console service..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/web-console.service" ark@$HOST:/tmp/
