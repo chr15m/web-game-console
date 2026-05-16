@@ -105,7 +105,32 @@
             color: #888;
             font-size: 1.2em;
         }
+        #game-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            z-index: 9999;
+            background: #000;
+        }
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: lime;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-left: 15px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body tabindex="0">
     <h1>Select Demo</h1>
@@ -144,12 +169,14 @@
 
     <div id="instructions">Use D-Pad / Left Stick to navigate.<br>Press A/X to select.<br>Press Y to go Home.</div>
 
+    <iframe id="game-iframe" class="hidden"></iframe>
+
     <script>
         document.body.focus();
         window.addEventListener('blur', () => console.log('DEBUG: Window lost focus'));
         window.addEventListener('focus', () => console.log('DEBUG: Window gained focus'));
 
-        const SYMBOLS = ['⭐', '🍄', '🔥', '💧', '💎', '🍌', '🍎', '🍀', '👻', '💀', '👽', '🤖', '💣', '🔔', '❤️', '🌙'];
+        const SYMBOLS = ['🌟', '🍄', '🔥', '💧', '💎', '🍌', '🍎', '🍀', '👻', '💀', '👽', '🤖', '💣', '🔔', '💙', '🌙'];
         let currentScreen = 'main'; // main, tests, gamecode, picker
         const mainItems = document.querySelectorAll('#main-menu .menu-item');
         const testsItems = document.querySelectorAll('#tests-menu .menu-item');
@@ -162,6 +189,9 @@
         let gridData = Array(16).fill(-1); // Indices into SYMBOLS, -1 is empty
         let mockMatchData = null;
         let gamecodeFocus = 'grid'; // 'grid' or 'match'
+        let fetching = false;
+        let fetchedEvent = null;
+        let ws = null;
 
         let lastAxisX = 0;
         let lastAxisY = 0;
@@ -195,6 +225,140 @@
             });
         }
 
+        async function verifyGameCode(pkHex, saltNum) {
+            const pkBytes = new Uint8Array(pkHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const saltBytes = new Uint8Array(4);
+            new DataView(saltBytes.buffer).setUint32(0, saltNum, true);
+            
+            const concatBytes = new Uint8Array(pkBytes.length + 4);
+            concatBytes.set(pkBytes, 0);
+            concatBytes.set(saltBytes, pkBytes.length);
+            
+            const hashBuffer = await crypto.subtle.digest("SHA-256", concatBytes);
+            const hashArray = new Uint8Array(hashBuffer);
+            const codeBytes = hashArray.slice(0, 8);
+            
+            let emojis = [];
+            for (let b of codeBytes) {
+                emojis.push(SYMBOLS[b >> 4]);
+                emojis.push(SYMBOLS[b & 0x0F]);
+            }
+            return emojis;
+        }
+
+        function fetchGame(wgc5) {
+            if (fetching) {
+                console.log(`[Nostr] fetchGame called but already fetching. Ignoring.`);
+                return;
+            }
+            console.log(`[Nostr] Starting fetch for wgc5: ${wgc5}`);
+            fetching = true;
+            document.getElementById('gamecode-title').innerHTML = "Searching Nostr... <div class='spinner'></div>";
+            
+            if (ws) {
+                console.log(`[Nostr] Closing existing WebSocket connection.`);
+                ws.close();
+            }
+            console.log(`[Nostr] Opening new WebSocket to wss://relay.mccormick.cx`);
+            ws = new WebSocket('wss://relay.mccormick.cx');
+            
+            ws.onopen = () => {
+                console.log(`[Nostr] WebSocket connected.`);
+                const subId = "wgc-" + Math.random().toString(36).substring(2);
+                const req = ["REQ", subId, { kinds: [30078], "#t": ["wgc5-" + wgc5], limit: 1 }];
+                console.log(`[Nostr] Sending REQ:`, JSON.stringify(req));
+                ws.send(JSON.stringify(req));
+            };
+            
+            ws.onmessage = async (e) => {
+                console.log(`[Nostr] Received message:`, e.data);
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data[0] === "EVENT") {
+                        const event = data[2];
+                        console.log(`[Nostr] Parsed EVENT:`, event);
+                        const saltTag = event.tags.find(t => t[0] === 'wgc_m');
+                        if (saltTag) {
+                            const salt = parseInt(saltTag[1], 10);
+                            console.log(`[Nostr] Found salt: ${salt}, verifying game code...`);
+                            const fullCodeEmojis = await verifyGameCode(event.pubkey, salt);
+                            console.log(`[Nostr] Verified full code emojis:`, fullCodeEmojis.join(''));
+                            
+                            mockMatchData = fullCodeEmojis.map(emoji => SYMBOLS.indexOf(emoji));
+                            fetchedEvent = event;
+                            gamecodeFocus = 'match';
+                            document.getElementById('gamecode-title').textContent = "Game Found!";
+                            updateGridUI();
+                        } else {
+                            console.warn(`[Nostr] EVENT missing wgc_m salt tag!`);
+                        }
+                        console.log(`[Nostr] Closing WebSocket after receiving EVENT.`);
+                        ws.close();
+                    } else if (data[0] === "EOSE") {
+                        console.log(`[Nostr] Received EOSE.`);
+                        if (!fetchedEvent) {
+                            console.log(`[Nostr] EOSE reached but no event found.`);
+                            document.getElementById('gamecode-title').textContent = "Not Found";
+                            setTimeout(() => {
+                                if (currentScreen === 'gamecode' && !fetchedEvent) {
+                                    document.getElementById('gamecode-title').textContent = "Enter Game Code";
+                                    gridData.fill(-1);
+                                    gridCursor = {x:0, y:0};
+                                    updateGridUI();
+                                }
+                            }, 2000);
+                        }
+                        console.log(`[Nostr] Closing WebSocket after EOSE.`);
+                        ws.close();
+                    }
+                } catch (err) {
+                    console.error(`[Nostr] Error parsing message:`, err);
+                }
+            };
+            
+            ws.onclose = (e) => { 
+                console.log(`[Nostr] WebSocket closed. Code: ${e.code}, Reason: ${e.reason}`);
+                fetching = false; 
+            };
+            ws.onerror = (err) => { 
+                console.error(`[Nostr] WebSocket error:`, err);
+                fetching = false; 
+                document.getElementById('gamecode-title').textContent = "Network Error";
+            };
+        }
+
+        async function launchGame(base64Zip) {
+            console.log(`[Nostr] Launching game, base64 length: ${base64Zip.length}`);
+            document.getElementById('gamecode-title').innerHTML = "Loading... <div class='spinner'></div>";
+            try {
+                const zip = new JSZip();
+                await zip.loadAsync(base64Zip, {base64: true});
+                
+                let indexFile = null;
+                zip.forEach((relativePath, file) => {
+                    if (relativePath.endsWith('index.html')) {
+                        indexFile = file;
+                    }
+                });
+                
+                if (!indexFile) throw new Error("No index.html found in bundle");
+                
+                const htmlContent = await indexFile.async("string");
+                const blob = new Blob([htmlContent], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                
+                const iframe = document.getElementById('game-iframe');
+                iframe.src = url;
+                iframe.classList.remove('hidden');
+                iframe.focus();
+                
+                currentScreen = 'playing';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('gamecode-title').textContent = "Error Loading Game";
+            }
+        }
+
         function initGrid() {
             const container = document.getElementById('grid-container');
             if (container.children.length === 0) {
@@ -223,19 +387,22 @@
             const isPicker = currentScreen === 'picker';
             document.getElementById('grid-container').classList.toggle('hidden', isPicker);
             document.getElementById('picker-container').classList.toggle('hidden', !isPicker);
-            document.getElementById('gamecode-title').textContent = isPicker ? "Select Symbol" : "Enter Game Code";
+            
+            if (!fetching && !fetchedEvent) {
+                document.getElementById('gamecode-title').textContent = isPicker ? "Select Symbol" : "Enter Game Code";
+            }
 
             let first5Filled = true;
             for (let i = 0; i < 5; i++) {
                 if (gridData[i] === -1) first5Filled = false;
             }
 
-            if (first5Filled && !mockMatchData) {
-                mockMatchData = Array(16).fill(0);
-                for (let i = 0; i < 5; i++) mockMatchData[i] = gridData[i];
-                for (let i = 5; i < 16; i++) mockMatchData[i] = Math.floor(Math.random() * 16);
+            if (first5Filled && !mockMatchData && !fetching && !fetchedEvent) {
+                const wgc5 = gridData.slice(0, 5).map(idx => SYMBOLS[idx]).join('');
+                fetchGame(wgc5);
             } else if (!first5Filled) {
                 mockMatchData = null;
+                fetchedEvent = null;
                 if (gamecodeFocus === 'match') gamecodeFocus = 'grid';
             }
 
@@ -285,9 +452,8 @@
 
         function executeAction() {
             if (currentScreen === 'gamecode') {
-                if (gamecodeFocus === 'match') {
-                    alert("Game Verified and Launched! (Mock)");
-                    switchToScreen('main');
+                if (gamecodeFocus === 'match' && fetchedEvent) {
+                    launchGame(fetchedEvent.content);
                 } else {
                     switchToScreen('picker');
                 }
@@ -345,12 +511,27 @@
             pollCount++;
             if (pollCount % 180 === 0) {
                 const pads = navigator.getGamepads();
-                console.log('DEBUG: Poll active. Pad0 ID:', pads[0] ? pads[0].id : 'None');
+                // console.log('DEBUG: Poll active. Pad0 ID:', pads[0] ? pads[0].id : 'None');
             }
             const pads = navigator.getGamepads();
             const gp = pads[0];
 
             if (gp) {
+                const btnSelect = gp.buttons[8] && gp.buttons[8].pressed;
+                const btnStart = gp.buttons[9] && gp.buttons[9].pressed;
+
+                if (currentScreen === 'playing') {
+                    if (btnSelect && btnStart) {
+                        const iframe = document.getElementById('game-iframe');
+                        iframe.src = 'about:blank';
+                        iframe.classList.add('hidden');
+                        currentScreen = 'gamecode';
+                        document.body.focus();
+                    }
+                    requestAnimationFrame(poll);
+                    return;
+                }
+
                 const axisX = gp.axes[0] || 0;
                 const axisY = gp.axes[1] || 0;
                 const dpadUp = gp.buttons.length > 12 ? gp.buttons[12].pressed : false;
@@ -428,8 +609,8 @@
                 const bPressed = gp.buttons[0] && gp.buttons[0].pressed;
                 // Y button (left) = index 2
                 const yPressed = gp.buttons[2] && gp.buttons[2].pressed;
-                // Select button (A=1, X=3)
-                const selectPressed = (gp.buttons[1] && gp.buttons[1].pressed) ||
+                // Action button (A=1, X=3)
+                const actionPressed = (gp.buttons[1] && gp.buttons[1].pressed) ||
                                       (gp.buttons[3] && gp.buttons[3].pressed);
 
                 if (yPressed && !lastHomePress) {
@@ -442,10 +623,10 @@
                 }
                 lastBackPress = bPressed;
 
-                if (selectPressed && !lastButtonPress) {
+                if (actionPressed && !lastButtonPress) {
                     executeAction();
                 }
-                lastButtonPress = selectPressed;
+                lastButtonPress = actionPressed;
             }
             requestAnimationFrame(poll);
         }
