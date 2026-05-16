@@ -5,18 +5,32 @@
     [reagent.dom :as rdom]
     [promesa.core :as p]))
 
-(def emojis ["⭐" "🍄" "🔥" "💧" "💎" "🍌" "🍎" "🍀" "👻" "💀" "👽" "🤖" "💣" "🔔" "❤️" "🌙"])
+(def emojis ["🌟" "🍄" "🔥" "💧" "💎" "🍌" "🍎" "🍀" "👻" "💀" "👽" "🤖" "💣" "🔔" "💙" "🌙"])
 (def max-size-bytes (* 128 1024))
 (def relays ["wss://relay.mccormick.cx"])
 
 (defonce state (r/atom {:sk nil
                         :pk nil
                         :files []
+                        :game-name nil
                         :zip-base64 nil
                         :stats nil
                         :game-code nil
                         :publishing? false
-                        :error nil}))
+                        :error nil
+                        :history {}}))
+
+(defn load-history []
+  (when-let [stored (js/localStorage.getItem "wgc-publisher-history")]
+    (try
+      (let [parsed (js->clj (js/JSON.parse stored) :keywordize-keys true)]
+        (js/console.log "DEBUG: Loaded history from localStorage:" (clj->js parsed))
+        (swap! state assoc :history parsed))
+      (catch js/Error e
+        (js/console.error "DEBUG: Error loading history:" e)))))
+
+(defn save-history [history]
+  (js/localStorage.setItem "wgc-publisher-history" (js/JSON.stringify (clj->js history))))
 
 (defn hex->bytes [hex]
   (let [bytes (js/Uint8Array. (/ (.-length hex) 2))]
@@ -42,9 +56,13 @@
 
 (defn handle-file-select [e]
   (let [files (array-seq (.. e -target -files))]
-    (swap! state assoc :files files :zip-base64 nil :stats nil :error nil :game-code nil)
+    (swap! state assoc :files files :zip-base64 nil :stats nil :error nil :game-code nil :game-name nil)
     (when (seq files)
-      (let [zip (js/JSZip.)]
+      (let [zip (js/JSZip.)
+            first-path (.-webkitRelativePath (first files))
+            game-name (if (seq first-path) (first (.split first-path "/")) "unknown")]
+        (js/console.log "DEBUG: Selected game-name:" game-name)
+        (swap! state assoc :game-name game-name)
         (doseq [file files]
           (let [path (.-webkitRelativePath file)
                 clean-path (if (seq path)
@@ -85,24 +103,38 @@
 
 (defn publish! []
   (swap! state assoc :publishing? true :error nil)
-  (let [{:keys [sk pk zip-base64]} @state
-        salt (js/Math.floor (* (js/Math.random) 0xFFFFFFFF))]
+  (let [{:keys [sk pk zip-base64 game-name history]} @state
+        game-key (keyword game-name)
+        existing (get history game-key)
+        salt (if existing (:salt existing) (js/Math.floor (* (js/Math.random) 0xFFFFFFFF)))]
+    (js/console.log "DEBUG: publish! called")
+    (js/console.log "DEBUG: game-name (string):" game-name)
+    (js/console.log "DEBUG: game-key (keyword):" (str game-key))
+    (js/console.log "DEBUG: current history keys:" (clj->js (keys history)))
+    (js/console.log "DEBUG: existing entry found?:" (some? existing))
+    (js/console.log "DEBUG: existing data:" (clj->js existing))
+    (js/console.log "DEBUG: using salt:" salt)
     (p/let [code (generate-game-code pk salt)
-            uuid (str (random-uuid))
             event-template #js {:kind 30078
                                 :created_at (js/Math.floor (/ (js/Date.now) 1000))
-                                :tags #js [#js ["d" uuid]
-                                           #js ["wgc5" (slice-emojis code 5)]
-                                           #js ["wgc7" (slice-emojis code 7)]
-                                           #js ["wgc9" (slice-emojis code 9)]
+                                :tags #js [#js ["d" code]
+                                           #js ["t" (str "wgc5-" (slice-emojis code 5))]
+                                           #js ["t" (str "wgc7-" (slice-emojis code 7))]
+                                           #js ["t" (str "wgc9-" (slice-emojis code 9))]
                                            #js ["wgc_m" (str salt)]]
                                 :content zip-base64}
             event (js/NostrTools.finalizeEvent event-template sk)
             pool (js/NostrTools.SimplePool.)]
       (-> (js/Promise.any (.publish pool (clj->js relays) event))
           (.then (fn [_]
-                   (swap! state assoc :publishing? false :game-code code)
-                   (.close pool (clj->js relays))))
+                   (let [new-history (assoc history game-key
+                                            {:salt salt
+                                             :code code
+                                             :event-id (.-id event)
+                                             :updated-at (.toISOString (js/Date.))})]
+                     (save-history new-history)
+                     (swap! state assoc :publishing? false :game-code code :history new-history)
+                     (.close pool (clj->js relays)))))
           (.catch (fn [e]
                     (swap! state assoc :publishing? false :error (str "Publish failed: " e))
                     (.close pool (clj->js relays))))))))
@@ -143,10 +175,29 @@
        [:div.card
         [:h2 "4. Success!"]
         [:p "Your game has been published. Here is your Game Code:"]
-        [:div.game-code game-code]])]))
+        [:div.game-code game-code]])
+     
+     (when (seq (:history @state))
+       [:div.card
+        [:h2 "Published Games History"]
+        [:table {:style {:width "100%" :text-align "left" :border-collapse "collapse"}}
+         [:thead 
+          [:tr 
+           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Folder"] 
+           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Game Code"] 
+           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Event ID"]]]
+         [:tbody
+          (for [[gkey data] (:history @state)]
+            ^{:key gkey}
+            [:tr
+             [:td {:style {:padding "8px" :border-bottom "1px solid #333"}} (name gkey)]
+             [:td {:style {:padding "8px" :border-bottom "1px solid #333" :letter-spacing "2px"}} (:code data)]
+             [:td {:style {:padding "8px" :border-bottom "1px solid #333"}} 
+              [:code {:style {:color "#888"}} (subs (:event-id data) 0 8) "..."]]])]]])]))
 
 (defn ^:export init []
   (generate-or-load-keys)
+  (load-history)
   (rdom/render [app] (.getElementById js/document "app")))
 
 (init)
