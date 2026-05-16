@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Wi-Fi Settings</title>
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: sans-serif;
+            text-align: center;
+            padding-top: 25px;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        h1 { font-size: 3em; margin-bottom: 25px; flex-shrink: 0; }
+        #status { flex-shrink: 0; margin-bottom: 10px; }
+        .menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .menu-item {
+            font-size: 1.5em;
+            padding: 15px 20px;
+            border: 3px solid transparent;
+            border-radius: 10px;
+            transition: all 0.1s;
+            background-color: #333;
+            width: 80%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .selected {
+            border-color: lime;
+            color: lime;
+            background-color: #444;
+            transform: scale(1.02);
+        }
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: lime;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-left: 15px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body tabindex="0">
+    <h1>Wi-Fi Settings</h1>
+    <div id="status">Initializing...</div>
+    <div id="network-list" class="menu"></div>
+
+    <script>
+        window.systemApiReady = new Promise(resolve => {
+            if (typeof QWebChannel !== 'undefined') {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    const api = channel.objects.systemApi;
+                    window.systemApi = {
+                        nmcli: function(args) {
+                            return new Promise(res => {
+                                api.nmcli(args, function(resultStr) {
+                                    res(JSON.parse(resultStr));
+                                });
+                            });
+                        },
+                        connections: function() {
+                            return new Promise(res => {
+                                api.connections(function(resultList) {
+                                    res(resultList);
+                                });
+                            });
+                        }
+                    };
+                    resolve(window.systemApi);
+                });
+            } else {
+                window.systemApi = {
+                    nmcli: async () => ({code: 0, stdout: "*:MyHomeNetwork:85:WPA2\n :GuestNetwork:60:\n :Escaped\\:Colon:40:WPA1 WPA2", stderr: ""}),
+                    connections: async () => (["MyHomeNetwork.nmconnection"])
+                };
+                resolve(window.systemApi);
+            }
+        });
+
+        let selectedIndex = 0;
+        let networks = [];
+        let lastAxisY = 0;
+        let lastDpadUp = false;
+        let lastDpadDown = false;
+        let lastBackPress = false;
+        let lastButtonPress = false;
+        let isScanning = false;
+
+        async function loadNetworks(isInitial = false) {
+            if (isScanning) return;
+            isScanning = true;
+
+            if (isInitial) {
+                document.getElementById('status').innerHTML = "Scanning... <div class='spinner'></div>";
+                document.getElementById('network-list').innerHTML = "";
+            } else {
+                document.getElementById('status').innerHTML = "Updating... <div class='spinner' style='width:16px;height:16px;border-width:3px;'></div>";
+            }
+            
+            await window.systemApiReady;
+            const res = await window.systemApi.nmcli(['-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY', 'dev', 'wifi']);
+            
+            if (res.code !== 0) {
+                document.getElementById('status').textContent = "Error scanning networks.";
+                isScanning = false;
+                setTimeout(() => loadNetworks(false), 10000);
+                return;
+            }
+
+            const lines = res.stdout.split('\n').filter(l => l.trim() !== '');
+            let newNetworks = lines.map(line => {
+                let parts = line.split(':');
+                let inUse = parts[0] === '*';
+                let security = parts.pop();
+                let signal = parts.pop();
+                let ssid = parts.slice(1).join(':').replace(/\\:/g, ':');
+                return { inUse, ssid, signal, security };
+            }).filter(n => n.ssid);
+
+            // Remove duplicates
+            const uniqueNetworks = [];
+            const seen = new Set();
+            for (const n of newNetworks) {
+                if (!seen.has(n.ssid)) {
+                    seen.add(n.ssid);
+                    uniqueNetworks.push(n);
+                }
+            }
+            
+            let selectedSsid = networks[selectedIndex] ? networks[selectedIndex].ssid : null;
+            networks = uniqueNetworks;
+            
+            if (selectedSsid) {
+                let newIdx = networks.findIndex(n => n.ssid === selectedSsid);
+                selectedIndex = newIdx !== -1 ? newIdx : 0;
+            } else {
+                selectedIndex = 0;
+            }
+
+            renderList();
+            document.getElementById('status').textContent = networks.length > 0 ? "Select a network:" : "No networks found.";
+            
+            isScanning = false;
+            setTimeout(() => loadNetworks(false), 10000);
+        }
+
+        function renderList() {
+            const list = document.getElementById('network-list');
+            list.innerHTML = '';
+            networks.forEach((net, i) => {
+                const div = document.createElement('div');
+                div.className = 'menu-item' + (i === selectedIndex ? ' selected' : '');
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = (net.inUse ? '✓ ' : '') + net.ssid;
+                
+                const infoSpan = document.createElement('span');
+                infoSpan.style.color = '#aaa';
+                infoSpan.style.fontSize = '0.8em';
+                infoSpan.textContent = `${net.signal}% ${net.security ? '🔒' : '🔓'}`;
+                
+                div.appendChild(nameSpan);
+                div.appendChild(infoSpan);
+                list.appendChild(div);
+            });
+
+            // Scroll into view
+            const selectedEl = list.children[selectedIndex];
+            if (selectedEl) {
+                selectedEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }
+
+        function poll() {
+            const pads = navigator.getGamepads();
+            const gp = pads[0];
+
+            if (gp) {
+                const axisY = gp.axes[1] || 0;
+                const dpadUp = gp.buttons.length > 12 ? gp.buttons[12].pressed : false;
+                const dpadDown = gp.buttons.length > 13 ? gp.buttons[13].pressed : false;
+
+                if ((axisY > 0.5 || dpadDown) && lastAxisY <= 0.5 && !lastDpadDown) {
+                    if (networks.length > 0) {
+                        selectedIndex = (selectedIndex + 1) % networks.length;
+                        renderList();
+                    }
+                } else if ((axisY < -0.5 || dpadUp) && lastAxisY >= -0.5 && !lastDpadUp) {
+                    if (networks.length > 0) {
+                        selectedIndex = (selectedIndex - 1 + networks.length) % networks.length;
+                        renderList();
+                    }
+                }
+
+                lastAxisY = axisY;
+                lastDpadUp = dpadUp;
+                lastDpadDown = dpadDown;
+
+                const bPressed = gp.buttons[0] && gp.buttons[0].pressed;
+                const actionPressed = (gp.buttons[1] && gp.buttons[1].pressed) ||
+                                      (gp.buttons[3] && gp.buttons[3].pressed);
+
+                if (bPressed && !lastBackPress) {
+                    window.location.href = 'index.html';
+                }
+                lastBackPress = bPressed;
+
+                if (actionPressed && !lastButtonPress) {
+                    if (networks[selectedIndex]) {
+                        console.log("Selected network:", networks[selectedIndex].ssid);
+                        // TODO: Implement connection logic / password prompt
+                        alert("Connection logic coming soon for: " + networks[selectedIndex].ssid);
+                    }
+                }
+                lastButtonPress = actionPressed;
+            }
+            requestAnimationFrame(poll);
+        }
+
+        document.body.focus();
+        setTimeout(() => loadNetworks(true), 50);
+        poll();
+    </script>
+</body>
+</html>

@@ -8,13 +8,37 @@ os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
 
 import re
-from PyQt5.QtCore import QUrl
+import json
+import subprocess
+from PyQt5.QtCore import QUrl, QObject, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript
+from PyQt5.QtWebChannel import QWebChannel
 
 class CustomWebEnginePage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         print(f"JS: {message} ({sourceID}:{lineNumber})", flush=True)
+
+class SystemApi(QObject):
+    @pyqtSlot(list, result=str)
+    def nmcli(self, args):
+        try:
+            cmd = ['sudo', 'nmcli'] + [str(a) for a in args]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            return json.dumps({"code": res.returncode, "stdout": res.stdout, "stderr": res.stderr})
+        except Exception as e:
+            return json.dumps({"code": -1, "stdout": "", "stderr": str(e)})
+
+    @pyqtSlot(result=list)
+    def connections(self):
+        try:
+            res = subprocess.run(['sudo', 'ls', '-1', '/etc/NetworkManager/system-connections/'], capture_output=True, text=True)
+            if res.returncode == 0:
+                return [f for f in res.stdout.strip().split('\n') if f]
+            return []
+        except Exception as e:
+            print(f"Error listing connections: {e}", flush=True)
+            return []
 
 app = QApplication(sys.argv)
 
@@ -115,6 +139,12 @@ profile.scripts().insert(script)
 window = QMainWindow()
 view = QWebEngineView()
 page = CustomWebEnginePage(profile, view)
+
+channel = QWebChannel()
+system_api = SystemApi()
+channel.registerObject("systemApi", system_api)
+page.setWebChannel(channel)
+
 view.setPage(page)
 
 view.setUrl(url)

@@ -139,6 +139,7 @@
     <div id="main-menu" class="menu">
         <div class="menu-item selected" data-action="gamecode">Enter gamecode</div>
         <div class="menu-item" data-action="tests">Tests</div>
+        <div class="menu-item" data-action="wifi">Wi-Fi Settings</div>
     </div>
 
     <!-- Gamecode Screen -->
@@ -169,7 +170,7 @@
 
     <div id="instructions">Use D-Pad / Left Stick to navigate.<br>Press A/X to select.<br>Press Y to go Home.</div>
 
-    <iframe id="game-iframe" class="hidden"></iframe>
+    <iframe id="game-iframe" class="hidden" sandbox="allow-scripts"></iframe>
 
     <script>
         document.body.focus();
@@ -482,6 +483,8 @@
                     switchToScreen('tests');
                 } else if (action === 'gamecode') {
                     switchToScreen('gamecode');
+                } else if (action === 'wifi') {
+                    window.location.href = 'app-wifi.html';
                 }
             } else if (currentScreen === 'tests') {
                 const href = item.getAttribute('data-href');
