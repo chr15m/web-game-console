@@ -1,6 +1,5 @@
 - [ ] Can we improve the UI so the grid is still showing while entering?
 - [ ] Audio is laggy - some way to reduce buffer size?
-- [ ] Provide a way to configure wifi, either the original emustation TUI or a localhost API with web UI.
 
 **QtWebEngine / EGLFS Tasks:**
 
@@ -20,6 +19,7 @@
 
 # Done
 
+- [x] Provide a way to configure wifi, either the original emustation TUI or a localhost API with web UI.
 - [x] Do a basic Nostr receive to get a game on there.
 - [x] EOSE should stop the loading spinner
 - [x] Get emojis showing up on the real hardware? (Chromium or qt5 problem?)
