@@ -34,6 +34,40 @@
         .selected {
             transform: scale(1.02);
         }
+        .modal {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #222;
+            border: 3px solid #555;
+            border-radius: 10px;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .osk-key {
+            background: #333;
+            border: 2px solid #444;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            height: 50px;
+        }
+        .osk-key.active {
+            border-color: lime;
+            background: #444;
+        }
     </style>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script src="gamepad.js"></script>
@@ -42,6 +76,21 @@
     <h1>Wi-Fi Settings</h1>
     <div id="status">Initializing...</div>
     <div id="network-list" class="menu"></div>
+
+    <div id="action-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="action-title" style="margin-top: 0;">Network</h2>
+            <div id="action-list" class="menu" style="width: 100%; overflow: visible;"></div>
+        </div>
+    </div>
+
+    <div id="osk-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">Enter Password</h2>
+            <div id="osk-input" style="background: #111; padding: 10px; font-size: 1.5em; margin-bottom: 20px; border: 2px solid #444; min-height: 1.5em; width: 100%; box-sizing: border-box; word-break: break-all; text-align: left;"></div>
+            <div id="osk-grid" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; width: 100%;"></div>
+        </div>
+    </div>
 
     <script>
         window.systemApiReady = new Promise(resolve => {
@@ -75,11 +124,44 @@
             }
         });
 
+        let currentScreen = 'list'; // list, action, osk, connecting
         let selectedIndex = 0;
         let networks = [];
+        let knownConnections = [];
         let isScanning = false;
 
+        // Action Menu State
+        let actionOptions = [];
+        let actionSelectedIndex = 0;
+        let actionNetwork = null;
+
+        // OSK State
+        let oskX = 0;
+        let oskY = 0;
+        let oskShift = false;
+        let oskText = "";
+        const OSK_KEYS_LOWER = [
+            ['a','b','c','d','e','f','g','h','i','j'],
+            ['k','l','m','n','o','p','q','r','s','t'],
+            ['u','v','w','x','y','z','0','1','2','3'],
+            ['4','5','6','7','8','9','-','_','@','.'],
+            ['!','#','$','%','^','&','*','(',')','+'],
+            ['Shift','Space','Bksp','Enter']
+        ];
+        const OSK_KEYS_UPPER = [
+            ['A','B','C','D','E','F','G','H','I','J'],
+            ['K','L','M','N','O','P','Q','R','S','T'],
+            ['U','V','W','X','Y','Z','0','1','2','3'],
+            ['4','5','6','7','8','9','-','_','@','.'],
+            ['!','#','$','%','^','&','*','(',')','+'],
+            ['Shift','Space','Bksp','Enter']
+        ];
+
         async function loadNetworks(isInitial = false) {
+            if (currentScreen !== 'list') {
+                setTimeout(() => loadNetworks(false), 5000);
+                return;
+            }
             if (isScanning) return;
             isScanning = true;
 
@@ -91,6 +173,12 @@
             }
             
             await window.systemApiReady;
+
+            const connRes = await window.systemApi.nmcli(['-t', '-f', 'NAME', 'connection', 'show']);
+            if (connRes.code === 0) {
+                knownConnections = connRes.stdout.split('\n').filter(l => l.trim() !== '');
+            }
+
             const res = await window.systemApi.nmcli(['-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY', 'dev', 'wifi']);
             
             if (res.code !== 0) {
@@ -130,8 +218,10 @@
                 selectedIndex = 0;
             }
 
-            renderList();
-            document.getElementById('status').textContent = networks.length > 0 ? "Select a network:" : "No networks found.";
+            if (currentScreen === 'list') {
+                renderList();
+                document.getElementById('status').textContent = networks.length > 0 ? "Select a network:" : "No networks found.";
+            }
             
             isScanning = false;
             setTimeout(() => loadNetworks(false), 10000);
@@ -164,27 +254,210 @@
             }
         }
 
+        function showActionMenu(net, options) {
+            currentScreen = 'action';
+            actionNetwork = net;
+            actionOptions = options;
+            actionSelectedIndex = 0;
+            
+            document.getElementById('action-title').textContent = net.ssid;
+            document.getElementById('action-modal').classList.remove('hidden');
+            renderActionMenu();
+        }
+
+        function hideActionMenu() {
+            document.getElementById('action-modal').classList.add('hidden');
+            currentScreen = 'list';
+        }
+
+        function renderActionMenu() {
+            const list = document.getElementById('action-list');
+            list.innerHTML = '';
+            actionOptions.forEach((opt, i) => {
+                const div = document.createElement('div');
+                div.className = 'menu-item' + (i === actionSelectedIndex ? ' selected' : '');
+                div.style.justifyContent = 'center';
+                div.textContent = opt;
+                list.appendChild(div);
+            });
+        }
+
+        async function executeAction(action) {
+            hideActionMenu();
+            const ssid = actionNetwork.ssid;
+            
+            if (action === 'Cancel') return;
+            
+            currentScreen = 'connecting';
+            document.getElementById('status').innerHTML = `${action}ing ${ssid}... <div class='spinner'></div>`;
+            
+            let res;
+            if (action === 'Disconnect') {
+                res = await window.systemApi.nmcli(['con', 'down', ssid]);
+            } else if (action === 'Forget') {
+                res = await window.systemApi.nmcli(['con', 'delete', ssid]);
+            } else if (action === 'Connect') {
+                res = await window.systemApi.nmcli(['con', 'up', ssid]);
+            }
+            
+            currentScreen = 'list';
+            loadNetworks(true);
+        }
+
+        function showOsk(net) {
+            currentScreen = 'osk';
+            actionNetwork = net;
+            oskText = "";
+            oskX = 0;
+            oskY = 0;
+            oskShift = false;
+            document.getElementById('osk-modal').classList.remove('hidden');
+            renderOsk();
+        }
+
+        function hideOsk() {
+            document.getElementById('osk-modal').classList.add('hidden');
+            currentScreen = 'list';
+        }
+
+        function renderOsk() {
+            document.getElementById('osk-input').textContent = oskText + "_";
+            const grid = document.getElementById('osk-grid');
+            grid.innerHTML = '';
+            
+            const layout = oskShift ? OSK_KEYS_UPPER : OSK_KEYS_LOWER;
+            
+            for (let y = 0; y < layout.length; y++) {
+                const row = layout[y];
+                for (let x = 0; x < row.length; x++) {
+                    const key = row[x];
+                    const div = document.createElement('div');
+                    div.className = 'osk-key' + (oskX === x && oskY === y ? ' active' : '');
+                    div.textContent = key;
+                    
+                    if (y === 5) {
+                        // Last row spans
+                        if (key === 'Shift') div.style.gridColumn = 'span 2';
+                        else if (key === 'Space') div.style.gridColumn = 'span 4';
+                        else if (key === 'Bksp') div.style.gridColumn = 'span 2';
+                        else if (key === 'Enter') div.style.gridColumn = 'span 2';
+                    }
+                    
+                    grid.appendChild(div);
+                }
+            }
+        }
+
+        async function submitOsk() {
+            const password = oskText;
+            const ssid = actionNetwork.ssid;
+            hideOsk();
+            
+            currentScreen = 'connecting';
+            document.getElementById('status').innerHTML = `Connecting to ${ssid}... <div class='spinner'></div>`;
+            
+            const res = await window.systemApi.nmcli(['device', 'wifi', 'connect', ssid, 'password', password]);
+            
+            currentScreen = 'list';
+            loadNetworks(true);
+        }
+
         const gamepad = new GamepadInput({
             onUp: () => {
-                if (networks.length > 0) {
-                    selectedIndex = (selectedIndex - 1 + networks.length) % networks.length;
-                    renderList();
+                if (currentScreen === 'list') {
+                    if (networks.length > 0) {
+                        selectedIndex = (selectedIndex - 1 + networks.length) % networks.length;
+                        renderList();
+                    }
+                } else if (currentScreen === 'action') {
+                    actionSelectedIndex = (actionSelectedIndex - 1 + actionOptions.length) % actionOptions.length;
+                    renderActionMenu();
+                } else if (currentScreen === 'osk') {
+                    oskY = (oskY - 1 + 6) % 6;
+                    if (oskY === 5 && oskX > 3) oskX = 3;
+                    renderOsk();
                 }
             },
             onDown: () => {
-                if (networks.length > 0) {
-                    selectedIndex = (selectedIndex + 1) % networks.length;
-                    renderList();
+                if (currentScreen === 'list') {
+                    if (networks.length > 0) {
+                        selectedIndex = (selectedIndex + 1) % networks.length;
+                        renderList();
+                    }
+                } else if (currentScreen === 'action') {
+                    actionSelectedIndex = (actionSelectedIndex + 1) % actionOptions.length;
+                    renderActionMenu();
+                } else if (currentScreen === 'osk') {
+                    oskY = (oskY + 1) % 6;
+                    if (oskY === 5 && oskX > 3) oskX = 3;
+                    renderOsk();
                 }
             },
-            onAction: () => {
-                if (networks[selectedIndex]) {
-                    console.log("Selected network:", networks[selectedIndex].ssid);
-                    alert("Connection logic coming soon for: " + networks[selectedIndex].ssid);
+            onLeft: () => {
+                if (currentScreen === 'osk') {
+                    const rowLen = oskY === 5 ? 4 : 10;
+                    oskX = (oskX - 1 + rowLen) % rowLen;
+                    renderOsk();
+                }
+            },
+            onRight: () => {
+                if (currentScreen === 'osk') {
+                    const rowLen = oskY === 5 ? 4 : 10;
+                    oskX = (oskX + 1) % rowLen;
+                    renderOsk();
+                }
+            },
+            onAction: async () => {
+                if (currentScreen === 'list') {
+                    const net = networks[selectedIndex];
+                    if (!net) return;
+                    
+                    const isKnown = knownConnections.includes(net.ssid);
+                    
+                    if (net.inUse) {
+                        showActionMenu(net, ['Disconnect', 'Forget', 'Cancel']);
+                    } else if (isKnown) {
+                        showActionMenu(net, ['Connect', 'Forget', 'Cancel']);
+                    } else {
+                        if (net.security) {
+                            showOsk(net);
+                        } else {
+                            currentScreen = 'connecting';
+                            document.getElementById('status').innerHTML = `Connecting to ${net.ssid}... <div class='spinner'></div>`;
+                            await window.systemApi.nmcli(['device', 'wifi', 'connect', net.ssid]);
+                            currentScreen = 'list';
+                            loadNetworks(true);
+                        }
+                    }
+                } else if (currentScreen === 'action') {
+                    executeAction(actionOptions[actionSelectedIndex]);
+                } else if (currentScreen === 'osk') {
+                    const layout = oskShift ? OSK_KEYS_UPPER : OSK_KEYS_LOWER;
+                    const key = layout[oskY][oskX];
+                    
+                    if (key === 'Shift') {
+                        oskShift = !oskShift;
+                    } else if (key === 'Space') {
+                        oskText += ' ';
+                    } else if (key === 'Bksp') {
+                        oskText = oskText.slice(0, -1);
+                    } else if (key === 'Enter') {
+                        submitOsk();
+                        return;
+                    } else {
+                        oskText += key;
+                    }
+                    renderOsk();
                 }
             },
             onBack: () => {
-                window.location.href = 'index.html';
+                if (currentScreen === 'list') {
+                    window.location.href = 'index.html';
+                } else if (currentScreen === 'action') {
+                    hideActionMenu();
+                } else if (currentScreen === 'osk') {
+                    hideOsk();
+                }
             }
         });
 
