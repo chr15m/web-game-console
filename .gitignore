@@ -1,3 +1,6 @@
+.*.swp
+.dev-browser*
+.nrepl-port
 .aider*
 .context*
 .envrc
