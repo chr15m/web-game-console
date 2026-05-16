@@ -11,17 +11,245 @@
     <script src="https://cdn.jsdelivr.net/npm/scittle@latest/dist/scittle.reagent.min.js" type="application/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/nostr-tools@2.17.2/lib/nostr.bundle.min.js"></script>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #111; color: #eee; }
-        .card { background: #222; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        input[type="file"] { margin: 20px 0; }
-        .game-code { font-size: 32px; letter-spacing: 5px; background: #000; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0; }
-        .error { color: #ff6b6b; }
+        :root {
+          --fg: #e8e4d8;
+          --bg: #161616;
+          --shade: #889;
+          --error-bg: #782828;
+          --radius: 4px;
+          --content-width: 800px;
+        }
+
+        html {
+          font-size: 1.25rem;
+          box-sizing: border-box;
+          height: 100%;
+        }
+
+        *, ::after, ::before {
+          box-sizing: inherit;
+        }
+
+        body {
+          margin: 0;
+          background: var(--bg);
+          color: var(--fg);
+          font-family: Helvetica, Arial, sans-serif;
+          padding: 1em;
+          height: 100%;
+        }
+
+        footer {
+          text-align: center;
+          padding: 2em 0px;
+        }
+
+        #app {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 1em;
+          min-height: 100%;
+        }
+
+        a { color: var(--fg); }
+
+        .logo-icon {
+          vertical-align: middle;
+          display: inline-block;
+          width: 24px;
+          height: 24px;
+        }
+
+        body header, body main, body footer {
+          margin: 0px auto;
+          padding-left: 10px;
+          padding-right: 10px;
+          width: 100%;
+        }
+
+        body main {
+          max-width: 100%;
+          width: var(--content-width);
+          flex-grow: 1;
+        }
+
+        body > header {
+          padding-top: 1rem;
+          padding-bottom: 1rem;
+          font-size: 1.2em;
+        }
+
+        h2 { font-size: 1.5em; }
+        h3 { font-size: 1.17em; }
+
+        button {
+          display: inline-block;
+          vertical-align: middle;
+          padding: .2rem .5rem;
+          font-size: 1rem;
+          margin-bottom: .5rem;
+          background: var(--fg);
+          color: var(--bg);
+          border: .1rem solid var(--fg);
+          border-radius: var(--radius);
+          cursor: pointer;
+        }
+
+        button:hover {
+          opacity: 0.9;
+        }
+
+        button[type="reset"] {
+          background: transparent;
+          color: var(--fg);
+        }
+
+        button:disabled {
+          cursor: not-allowed; 
+          background: var(--shade);
+          border: 2px solid var(--shade);
+          color: var(--bg);
+        }
+
+        label {
+          display: block;
+          font-weight: bold;
+          margin-bottom: .4rem;
+        }
+
+        input[type="file"] {
+          box-sizing: inherit;
+          padding: .5rem .5rem;
+          width: 100%;
+          font-size: 1rem;
+          color: var(--fg);
+          background-color: var(--bg);
+          border: .1rem solid var(--fg);
+          border-radius: var(--radius);
+          margin-bottom: .8rem;
+        }
+
+        table {
+          width: 100%;
+          border-spacing: 0;
+        }
+
+        td, th { padding: .4rem; }
+        th { border-bottom: .1rem solid var(--fg); text-align: left; }
+        td { border-bottom: .05rem solid var(--fg); }
+
+        .spread {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+        }
+
+        action-buttons {
+          display: flex;
+          justify-content: end;
+          gap: 1em;
+          align-items: center;
+        }
+
+        action-buttons svg {
+          display: block;
+          width: 24px;
+          height: 24px;
+        }
+
+        .icon-sm { width: 20px; height: 20px; }
+
+        .error {
+          background-color: var(--error-bg);
+          padding: 0.5em 1em;
+          border-radius: var(--radius);
+        }
+
+        .clickable { cursor: pointer; }
+
+        dialog {
+          background: var(--bg);
+          color: var(--fg);
+          border: .1rem solid var(--fg);
+          border-radius: var(--radius);
+          padding: 1.5em;
+          max-width: 400px;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          margin: 0;
+        }
+
+        .dialog-actions {
+          text-align: right;
+          margin-top: 1.5em;
+        }
+
+        .game-code-display { font-size: 2rem; letter-spacing: 4px; background: #000; padding: 1rem; text-align: center; border-radius: var(--radius); margin: 1rem 0; }
+
+        [data-notification-text] {
+          position: relative;
+        }
+
+        [data-notification-text].notify::before {
+          content: attr(data-notification-text);
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: rgba(255,255,255,0.9);
+          color: #000;
+          padding: 0.2rem 0.5rem;
+          font-size: 0.8rem;
+          border-radius: var(--radius);
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 100;
+        }
+
+        .history-table td { vertical-align: middle; }
+        .plus-btn-container { text-align: right; margin-top: 2rem; }
+        .plus-btn { font-size: 1.5rem; padding: 0.5rem 1.5rem; border-radius: var(--radius); line-height: 1; }
+        .copyable { cursor: pointer; }
+        .copyable:hover { text-decoration: underline; }
     </style>
     <script type="application/x-scittle" src="main.cljs"></script>
 </head>
 <body>
     <div id="app">Loading...</div>
+
+    <!-- SVG Sprite Sheet -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+      <symbol id="icon-sun" viewBox="0 0 24 24" fill="currentColor">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 19a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" />
+        <path d="M18.313 16.91l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.218 -1.567l.102 .07z" />
+        <path d="M7.007 16.993a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" />
+        <path d="M4 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" />
+        <path d="M21 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z" />
+        <path d="M6.213 4.81l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.217 -1.567l.102 .07z" />
+        <path d="M19.107 4.893a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z" />
+        <path d="M12 2a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z" />
+        <path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z" />
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+        <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+      </symbol>
+      <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+        <path d="M7 9l5 -5l5 5" />
+        <path d="M12 4l0 12" />
+      </symbol>
+      <symbol id="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" />
+        <path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" />
+      </symbol>
+    </svg>
 </body>
 </html>

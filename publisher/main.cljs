@@ -11,6 +11,7 @@
 
 (defonce state (r/atom {:sk nil
                         :pk nil
+                        :npub nil
                         :files []
                         :game-name nil
                         :zip-base64 nil
@@ -18,7 +19,8 @@
                         :game-code nil
                         :publishing? false
                         :error nil
-                        :history {}}))
+                        :history {}
+                        :show-modal? false}))
 
 (defn load-history []
   (when-let [stored (js/localStorage.getItem "wgc-publisher-history")]
@@ -47,16 +49,18 @@
   (let [stored (js/localStorage.getItem "wgc-publisher-sk")]
     (if stored
       (let [sk (hex->bytes stored)
-            pk (js/NostrTools.getPublicKey sk)]
-        (swap! state assoc :sk sk :pk pk))
+            pk (js/NostrTools.getPublicKey sk)
+            npub (js/NostrTools.nip19.npubEncode pk)]
+        (swap! state assoc :sk sk :pk pk :npub npub))
       (let [sk (js/NostrTools.generateSecretKey)
-            pk (js/NostrTools.getPublicKey sk)]
+            pk (js/NostrTools.getPublicKey sk)
+            npub (js/NostrTools.nip19.npubEncode pk)]
         (js/localStorage.setItem "wgc-publisher-sk" (bytes->hex sk))
-        (swap! state assoc :sk sk :pk pk)))))
+        (swap! state assoc :sk sk :pk pk :npub npub)))))
 
 (defn handle-file-select [e]
   (let [files (array-seq (.. e -target -files))]
-    (swap! state assoc :files files :zip-base64 nil :stats nil :error nil :game-code nil :game-name nil)
+    (swap! state assoc :files files :zip-base64 nil :stats nil :error nil :game-code nil)
     (when (seq files)
       (let [zip (js/JSZip.)
             first-path (.-webkitRelativePath (first files))
@@ -139,61 +143,98 @@
                     (swap! state assoc :publishing? false :error (str "Publish failed: " e))
                     (.close pool (clj->js relays))))))))
 
+(defn copy-to-clipboard [e text]
+  (let [el (.-currentTarget e)]
+    (-> (js/navigator.clipboard.writeText text)
+        (.then (fn []
+                 (.add (.-classList el) "notify")
+                 (js/setTimeout #(.remove (.-classList el) "notify") 2000))))))
+
+(defn upload-modal []
+  (let [{:keys [stats error game-code publishing?]} @state]
+    [:dialog {:open true}
+     [:div
+      [:h3 (if game-code "Success!" "Upload Game")]
+      
+      (if game-code
+        [:div
+         [:p "Your game has been published. Here is your Game Code:"]
+         [:div.game-code-display.copyable 
+          {:data-notification-text "Copied!"
+           :on-click #(copy-to-clipboard % game-code)}
+          game-code]
+         [:div.dialog-actions
+          [:button {:on-click #(swap! state assoc :show-modal? false :game-code nil :stats nil)} "Close"]]]
+        
+        [:div
+         (when-not stats
+           [:div
+            [:label "Select Game Folder"]
+            [:input {:type "file"
+                     :webkitdirectory "true"
+                     :directory "true"
+                     :on-change handle-file-select}]])
+         
+         (when error
+           [:p.error error])
+         
+         (when stats
+           [:div
+            [:p "Files: " (:count stats)]
+            [:p "Compressed Size: " (:size stats) " bytes"]
+            [:div.dialog-actions
+             [:button {:on-click publish!
+                       :disabled publishing?}
+              (if publishing? "Publishing..." "Publish to Nostr")]
+             [:button {:type "reset" :on-click #(swap! state assoc :show-modal? false :stats nil :error nil)} "Cancel"]]])
+         
+         (when (and (not stats) (not publishing?))
+           [:div.dialog-actions
+            [:button {:type "reset" :on-click #(swap! state assoc :show-modal? false :error nil)} "Cancel"]])])]]))
+
 (defn app []
-  (let [{:keys [pk _files stats error game-code publishing?]} @state]
-    [:div
-     [:h1 "WGC Publisher"]
-     [:div.card
-      [:h2 "1. Identity"]
-      (if pk
-        [:p "Publisher Pubkey: " [:code pk]]
-        [:p "Generating keys..."])]
-     
-     [:div.card
-      [:h2 "2. Select Game Folder"]
-      [:p "Select a directory containing your HTML5 game (must have an index.html). Max size 128KB."]
-      [:input {:type "file"
-               :webkitdirectory "true"
-               :directory "true"
-               :on-change handle-file-select}]]
-     
-     (when error
-       [:div.card.error
-        [:h3 "Error"]
-        [:p error]])
-     
-     (when stats
-       [:div.card
-        [:h2 "3. Bundle Stats"]
-        [:p "Files: " (:count stats)]
-        [:p "Compressed Size: " (:size stats) " bytes"]
-        [:button {:on-click publish!
-                  :disabled publishing?}
-         (if publishing? "Publishing..." "Publish to Nostr")]])
-     
-     (when game-code
-       [:div.card
-        [:h2 "4. Success!"]
-        [:p "Your game has been published. Here is your Game Code:"]
-        [:div.game-code game-code]])
-     
-     (when (seq (:history @state))
-       [:div.card
-        [:h2 "Published Games History"]
-        [:table {:style {:width "100%" :text-align "left" :border-collapse "collapse"}}
-         [:thead 
-          [:tr 
-           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Folder"] 
-           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Game Code"] 
-           [:th {:style {:border-bottom "1px solid #444" :padding "8px"}} "Event ID"]]]
-         [:tbody
-          (for [[gkey data] (:history @state)]
-            ^{:key gkey}
-            [:tr
-             [:td {:style {:padding "8px" :border-bottom "1px solid #333"}} (name gkey)]
-             [:td {:style {:padding "8px" :border-bottom "1px solid #333" :letter-spacing "2px"}} (:code data)]
-             [:td {:style {:padding "8px" :border-bottom "1px solid #333"}} 
-              [:code {:style {:color "#888"}} (subs (:event-id data) 0 8) "..."]]])]]])]))
+  (let [{:keys [npub history show-modal?]} @state]
+    [:div#app
+     [:header.spread
+      [:div.clickable
+       [:svg.logo-icon [:use {:href "#icon-sun"}]]
+       [:strong " web game console"]]
+      [:nav
+       [:action-buttons
+        [:span {:style {:font-size "0.8em" :color "var(--shade)"}} 
+         (when npub (str (subs npub 0 12) "..." (subs npub (- (count npub) 4))))]
+        [:svg [:use {:href "#icon-user"}]]]]]
+
+     [:main
+      [:section
+       [:h2 "Published Games"]
+       (if (seq history)
+         [:table.history-table
+          [:thead
+           [:tr
+            [:th "Folder"]
+            [:th "Game Code"]
+            [:th "Actions"]]]
+          [:tbody
+           (for [[gkey data] history]
+             ^{:key gkey}
+             [:tr
+              [:td (name gkey)]
+              [:td.copyable {:data-notification-text "Copied!"
+                             :on-click #(copy-to-clipboard % (:code data))}
+               [:code {:style {:letter-spacing "2px"}} (:code data)]]
+              [:td
+               [:button {:on-click #(swap! state assoc :show-modal? true :game-name (name gkey))}
+                [:svg.icon-sm [:use {:href "#icon-upload"}]]]]])]]
+         [:p "No games published yet."])
+       
+       [:div.plus-btn-container
+        [:button.plus-btn {:on-click #(swap! state assoc :show-modal? true :game-name nil)} "+"]]]]
+
+     (when show-modal?
+       [upload-modal])
+
+     [:footer]]))
 
 (defn ^:export init []
   (generate-or-load-keys)
