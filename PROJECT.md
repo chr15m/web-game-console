@@ -4,7 +4,7 @@
 
 This project aims to create a web-based game console on the R36S handheld device. The R36S runs ArkOS (based on Ubuntu 19.10) and uses a Rockchip RK3326 SoC with a Mali-G31 MP2 GPU.
 
-The goal is to run a web browser on Xorg to deliver games via Nostr feeds.
+The goal is to run a hardware-accelerated web browser directly on the DRM/KMS framebuffer (bypassing X11/Wayland) using Qt5 WebEngine to deliver games via Nostr feeds. We have settled 100% on this `browser.py` (PyQt5) architecture.
 
 ## Technical Details
 
@@ -134,12 +134,22 @@ See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for detailed investigat
 
 Software rendering causes **jerky CSS animations and transitions**. A 2D game was tested and rendered correctly, but movement and CSS transitions were noticeably jerky. This confirms GPU acceleration is needed for smooth animation - the CPU cannot keep up with compositing work that the GPU should handle.
 
-### Software Stack
+### Software Stack (Current)
 
-- **Display Server**: Xorg 1.20.5 (currently implemented, but being phased out for direct EGL/KMS), Wayland blocked by Mali GBM issues
+- **Browser Engine**: Chromium 69 (via `python3-pyqt5.qtwebengine`)
+- **Display Platform**: Qt EGLFS (`QT_QPA_PLATFORM=eglfs`) rendering directly to DRM/KMS
+- **Wrapper**: Python 3 with PyQt5 (`browser.py`)
+- **Service Manager**: systemd (`web-console.service`) attaching to `/dev/tty1` for DRM master lock
+- **Input**: Native HTML5 Gamepad API (via disabled Chromium sandbox)
+
+### Archived Software Stack (X11/Wayland)
+
+*Note: We have settled 100% on the PyQt5 WebEngine architecture. The following is preserved for historical context.*
+
+- **Display Server**: Xorg 1.20.5 (abandoned), Wayland blocked by Mali GBM issues
 - **Window Manager**: matchbox-window-manager (kiosk-style, single window)
 - **GPU Driver**: modesetting (Mali driver fails to load)
-- **Browser**: surf (WebKit-based, suckless) - *Note: pivoting to WPE WebKit*
+- **Browser**: surf (WebKit-based, suckless)
 - **Cursor hiding**: unclutter
 
 ### APT Sources
@@ -158,16 +168,22 @@ Ubuntu 19.10 reached EOL in July 2020, so only archived packages are available.
 - Hostname: `rg351mp`
 - IP configured in `.envrc` as `IP=...`
 
-### Key Files
+### Key Files (Current)
 
-- `setup.sh` - Idempotent setup script run from local machine
+- `webkit-accel-test/browser.py` - The PyQt5 browser wrapper. Handles EGLFS setup, gamepad polyfills, and per-game storage profiles.
+- `webkit-accel-test/index.html` - The main console UI (Nostr fetching, game launching).
+- `webkit-accel-test/web-console.service` - The systemd unit that attaches to `/dev/tty1` and launches the browser.
+- `webkit-accel-test/deploy.sh` - Syncs files and restarts the service.
+- `setup.sh` - Idempotent setup script run from local machine.
+
+### Key Files (Archived X11)
+
 - `launch.sh` - Stops GDM, sets tty permissions, kills emulationstation, starts X
 - `xinitrc` - X startup script (copied to `~/.xinitrc` on device)
 - `driver/mali_drv.so` - Mali GPU driver for Xorg (currently not working)
 - `driver/99-mali.conf` - Xorg configuration for Mali GPU
-- `index.html` - Test HTML file
 
-### Driver Configuration
+### Archived: Driver Configuration (X11)
 
 The Mali driver is configured in `/etc/X11/xorg.conf.d/99-mali.conf`:
 
@@ -284,7 +300,27 @@ Key processes running on the device:
 
 **Note**: `killall emulationstation` often fails. Use `pkill -f emulationstation` instead.
 
-## Setup Process
+## Setup Process (Current)
+
+To prepare a fresh ArkOS R36S device, run from your local machine:
+
+```bash
+./setup.sh <device-ip>
+```
+
+This is idempotent. It installs dependencies (PyQt5, emoji fonts), disables EmulationStation and GDM3, sets up the `web-console.service`, and copies the initial files.
+
+## Running the Browser (Current)
+
+When hacking on the Python browser wrapper or the HTML/JS UI, deploy your changes with:
+
+```bash
+cd webkit-accel-test && ./deploy.sh <device-ip>
+```
+
+This syncs the files, restarts the systemd service, and automatically opens an SSH tunnel for remote debugging. You can then open a Chromium-based browser on your local machine and navigate to `http://localhost:9222`.
+
+## Archived: Setup Process (X11)
 
 ### Manual Steps (on device)
 
@@ -314,7 +350,7 @@ The script:
 
 Uses SSH connection multiplexing to avoid multiple password prompts.
 
-## Running the Browser
+## Archived: Running the Browser (X11)
 
 Use the launch script:
 
@@ -333,21 +369,19 @@ The `~/.xinitrc` will:
 2. Start `matchbox-window-manager` (no title bars, auto-fullscreen)
 3. Launch `surf` in fullscreen mode with `/home/ark/index.html`
 
-## Next Steps
-
-See [PROJECT-video-upgrade.md](PROJECT-video-upgrade.md) for current GPU acceleration options.
+## Current Status & Next Steps
 
 **Current status:**
-- **SUCCESS**: Hardware-accelerated web rendering achieved! By using `python3-pyqt5.qtwebengine` with `QT_QPA_PLATFORM=eglfs` and redirecting I/O to `/dev/tty1`, we successfully bypassed X11/Wayland and rendered directly to the screen using the Mali GPU.
+- **SUCCESS**: We have settled 100% on the `browser.py` with Qt5 WebEngine architecture.
+- **Hardware-accelerated web rendering achieved!** By using `python3-pyqt5.qtwebengine` with `QT_QPA_PLATFORM=eglfs` and redirecting I/O to `/dev/tty1`, we successfully bypassed X11/Wayland and rendered directly to the screen using the Mali GPU.
 - **Performance Verified**: Tested complex CSS animations ("Juice It" bounce) and a full-screen WebGL spinning cube. WebGL reports the unmasked renderer as "Mali-G31" (Vendor: ARM) and runs at a smooth 50-60 FPS, proving the hardware compositor and 3D acceleration are fully active.
 - **Strategic Pivot**: The X11/Wayland paths are archived. They are dead ends due to Mali blob/kernel mismatches and missing GBM symbols.
 - **ROCKNIX blocked**: Fails to boot without hardware debugging (UART), which we are avoiding for now.
 
 **Recommended next steps:**
-1. **Input Handling (Resolved)**: Native HTML5 Gamepad API works with sandbox disabled.
-2. **Gamepad Mapping**: Write a small JS polyfill to map the raw R36S gamepad indices to the `"standard"` HTML5 gamepad layout.
-3. **Game Testing**: Get a real web game (like rogule.com) running and playable to verify WebGL and input integration.
-4. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
+1. **Gamepad Mapping (Resolved)**: JS polyfill maps the raw R36S gamepad indices to the `"standard"` HTML5 gamepad layout.
+2. **Game Testing**: Get a real web game (like rogule.com) running and playable to verify WebGL and input integration.
+3. **Nostr Integration**: Begin building the actual web console UI and Nostr game delivery mechanism.
 
 ## Updates
 
