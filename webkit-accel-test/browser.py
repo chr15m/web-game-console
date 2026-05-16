@@ -109,6 +109,7 @@ script.setName("GamepadPolyfill")
 script.setSourceCode(gamepad_polyfill)
 script.setInjectionPoint(QWebEngineScript.DocumentCreation)
 script.setWorldId(QWebEngineScript.MainWorld)
+script.setRunsOnSubFrames(True)
 profile.scripts().insert(script)
 
 window = QMainWindow()
