@@ -38,6 +38,8 @@ Running Chromium in this embedded context changes how it interacts with the host
 *   **Web Audio API:** Fully supported and tested. Audio routes correctly through the device's PulseAudio daemon and plays smoothly.
 *   **Local Storage / IndexedDB:** Fully supported and persistent. The browser wrapper automatically configures a `QWebEngineProfile` with a persistent path (`.storage/<slugified-hostname>`) so game saves survive reboots and are isolated per game.
 
+*   **JavaScript / ECMAScript:** The engine is based on Chromium 69, which supports up to **ECMAScript 2018 (ES9)**. Modern syntax features like optional chaining (`?.`) and nullish coalescing (`??`) (introduced in ES2020 / Chromium 80) are **not supported** and will cause syntax errors.
+
 ### 🟡 Requires Configuration
 *   **HTML5 Gamepad API:** Works perfectly, but **requires the Chromium sandbox to be disabled** (`QTWEBENGINE_DISABLE_SANDBOX=1`). Without this, the sandboxed renderer process is denied read access to `/dev/input/event*`. Note that the R36S controller reports `mapping: ""` (non-standard), so a JavaScript polyfill will be needed to map the raw button indices to the standard Xbox-style layout expected by most web games.
 
