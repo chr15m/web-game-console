@@ -1,5 +1,13 @@
+- [ ] Git pull to update
+- [ ] WiFi page fixes
+  - [ ] Open wifi access points should be clearer
+  - [ ] WiFi page hangs under different circumstances (e.g. connect)
+  - [ ] Can't exit WiFi page
+- [ ] Save games locally after downloading and list downloaded games
 - [ ] Can we improve the UI so the grid is still showing while entering?
 - [ ] Audio is laggy - some way to reduce buffer size?
+- [ ] An LLM document to explain how to build games, with examples
+- [ ] Support games with more than 1 file (?.localhost:8000 serving)
 
 **QtWebEngine / EGLFS Tasks:**
 
