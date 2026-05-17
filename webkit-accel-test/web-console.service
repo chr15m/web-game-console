@@ -6,7 +6,7 @@ Wants=play-video.service
 [Service]
 Type=simple
 User=ark
-WorkingDirectory=/home/ark
+WorkingDirectory=/home/ark/r36s-web-console/webkit-accel-test
 Environment="TERM=linux"
 Environment="XDG_RUNTIME_DIR=/run/user/%U"
 Environment="QT_QPA_PLATFORM=eglfs"
@@ -15,7 +15,7 @@ StandardInput=tty
 StandardOutput=tty
 TTYPath=/dev/tty1
 ExecStartPre=+/bin/chmod 666 /dev/tty1
-ExecStart=/usr/bin/python3 /home/ark/browser.py
+ExecStart=/usr/bin/python3 /home/ark/r36s-web-console/webkit-accel-test/browser.py
 Restart=always
 RestartSec=3
 

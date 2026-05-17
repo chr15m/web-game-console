@@ -9,6 +9,7 @@ fi
 HOST="$1"
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ssh-%r@%h:%p -o ControlPersist=60"
+REPO_URL=$(git config --get remote.origin.url || echo "https://github.com/chr15m/web-game-console.git")
 
 # Find available SSH public key
 PUBKEY=""
@@ -61,16 +62,41 @@ else
     echo "Apt cache is fresh (less than 30 days old), skipping update."
 fi
 
-echo "Ensuring PyQt5 WebEngine and Emoji fonts are installed..."
-ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y python3-pyqt5.qtwebengine fonts-noto-color-emoji"
+echo "Ensuring Git, PyQt5 WebEngine and Emoji fonts are installed..."
+ssh $SSH_OPTS ark@$HOST "sudo apt-get install -y git python3-pyqt5.qtwebengine fonts-noto-color-emoji"
 
 echo "Enabling SSH to start on boot..."
 ssh $SSH_OPTS ark@$HOST "sudo systemctl enable ssh"
 
-echo "Copying web console files..."
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/browser.py" ark@$HOST:/home/ark/
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/launch-browser.sh" ark@$HOST:/home/ark/
-rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/"*.html "$SCRIPT_DIR/webkit-accel-test/"*.css "$SCRIPT_DIR/webkit-accel-test/"*.js ark@$HOST:/home/ark/
+if [ -f "$SCRIPT_DIR/repo-ro-key" ]; then
+    echo "Installing read-only deploy key for GitHub..."
+    KEY_FILE="$SCRIPT_DIR/repo-ro-key"
+    rsync -e "ssh $SSH_OPTS" --checksum "$KEY_FILE" ark@$HOST:~/.ssh/repo-ro-key
+    ssh $SSH_OPTS ark@$HOST "chmod 600 ~/.ssh/repo-ro-key"
+    ssh $SSH_OPTS ark@$HOST "touch ~/.ssh/config && chmod 600 ~/.ssh/config"
+    ssh $SSH_OPTS ark@$HOST "grep -q 'IdentityFile ~/.ssh/repo-ro-key' ~/.ssh/config || echo -e 'Host github.com\n  IdentityFile ~/.ssh/repo-ro-key\n  StrictHostKeyChecking no\n' >> ~/.ssh/config"
+    
+    # Force SSH URL so the deploy key is actually used
+    REPO_URL="git@github.com:chr15m/web-game-console.git"
+fi
+
+echo "Migrating legacy files and cloning repository..."
+ssh $SSH_OPTS ark@$HOST "
+    if ls /home/ark/browser.py 1> /dev/null 2>&1; then
+        BACKUP_DIR=\"/home/ark/legacy_backup_\$(date +%s)\"
+        mkdir -p \"\$BACKUP_DIR\"
+        mv /home/ark/browser.py /home/ark/*.html /home/ark/*.css /home/ark/*.js /home/ark/launch-browser.sh \"\$BACKUP_DIR/\" 2>/dev/null || true
+        echo \"Legacy files moved to \$BACKUP_DIR\"
+    fi
+    if [ ! -d \"/home/ark/r36s-web-console\" ]; then
+        git clone $REPO_URL /home/ark/r36s-web-console
+    else
+        cd /home/ark/r36s-web-console && git fetch origin && git reset --hard origin/main
+    fi
+"
+
+echo "Syncing local changes to device..."
+rsync -avz -e "ssh $SSH_OPTS" --filter=':- .gitignore' "$SCRIPT_DIR/webkit-accel-test/" ark@$HOST:/home/ark/r36s-web-console/webkit-accel-test/
 
 echo "Installing web-console service..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/web-console.service" ark@$HOST:/tmp/

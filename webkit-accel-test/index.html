@@ -5,6 +5,7 @@
     <title>R36S Web Console Menu</title>
     <link rel="stylesheet" href="common.css">
     <script src="gamepad.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body tabindex="0">
     <h1>Select Demo</h1>
@@ -14,6 +15,7 @@
         <div class="menu-item selected" data-href="app-gameloader.html">Enter gamecode</div>
         <div class="menu-item" data-action="tests">Tests</div>
         <div class="menu-item" data-href="app-wifi.html">Wi-Fi Settings</div>
+        <div class="menu-item disabled" data-action="update" id="update-btn">Console up to date</div>
     </div>
 
     <!-- Tests Submenu -->
@@ -29,6 +31,37 @@
     <div id="instructions" style="margin-top: 50px; color: #888; font-size: 1.2em;">Use D-Pad / Left Stick to navigate.<br>Press A/X to select.<br>Press Y to go Home.</div>
 
     <script>
+        let systemApi = null;
+        let updateAvailable = false;
+
+        function pollForUpdates() {
+            if (!systemApi) return;
+            systemApi.check_update(function(responseStr) {
+                try {
+                    const response = JSON.parse(responseStr);
+                    const btn = document.getElementById('update-btn');
+                    if (response.code === 0 && response.update_available) {
+                        updateAvailable = true;
+                        btn.classList.remove('disabled');
+                        btn.innerText = "Update Console (New Version!)";
+                    } else {
+                        updateAvailable = false;
+                        btn.classList.add('disabled');
+                        btn.innerText = "Console up to date";
+                    }
+                } catch (e) {}
+            });
+        }
+
+        if (typeof QWebChannel !== 'undefined') {
+            new QWebChannel(qt.webChannelTransport, function (channel) {
+                systemApi = channel.objects.systemApi;
+                // Check immediately, then every 10 seconds
+                pollForUpdates();
+                setInterval(pollForUpdates, 10000);
+            });
+        }
+
         document.body.focus();
 
         let currentScreen = 'main'; // main, tests
@@ -76,6 +109,24 @@
                 const href = item.getAttribute('data-href');
                 if (action === 'tests') {
                     switchToScreen('tests');
+                } else if (action === 'update') {
+                    if (systemApi && updateAvailable) {
+                        item.innerText = "Applying update & restarting...";
+                        systemApi.update_system(function(responseStr) {
+                            // If it succeeds, the console will restart.
+                            // If it fails, we just reset the text.
+                            try {
+                                const response = JSON.parse(responseStr);
+                                if (response.code !== 0) {
+                                    item.innerText = "Update failed";
+                                    setTimeout(pollForUpdates, 2000);
+                                }
+                            } catch (e) {
+                                item.innerText = "Update failed";
+                                setTimeout(pollForUpdates, 2000);
+                            }
+                        });
+                    }
                 } else if (href) {
                     window.location.href = href;
                 }

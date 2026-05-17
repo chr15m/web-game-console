@@ -28,6 +28,14 @@ h1 { font-size: 3em; margin-bottom: 25px; }
     background-color: #444;
     transform: scale(1.05);
 }
+.menu-item.disabled {
+    color: #555;
+}
+.menu-item.disabled.selected {
+    border-color: #555;
+    color: #777;
+    background-color: #333;
+}
 .hidden { display: none !important; }
 .spinner {
     display: inline-block;

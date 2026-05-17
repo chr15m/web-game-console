@@ -1,5 +1,7 @@
 import sys
 import os
+import threading
+import time
 
 # Enable remote debugging on port 9222
 os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
@@ -39,6 +41,53 @@ class SystemApi(QObject):
         except Exception as e:
             print(f"Error listing connections: {e}", flush=True)
             return []
+
+    @pyqtSlot(result=str)
+    def check_update(self):
+        try:
+            repo_dir = "/home/ark/r36s-web-console"
+            if not os.path.exists(repo_dir):
+                return json.dumps({"code": -1, "error": "Repo not found"})
+            
+            local = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=repo_dir, capture_output=True, text=True).stdout.strip()
+            remote = subprocess.run(['git', 'rev-parse', 'origin/main'], cwd=repo_dir, capture_output=True, text=True).stdout.strip()
+            
+            return json.dumps({"code": 0, "update_available": bool(local and remote and local != remote)})
+        except Exception as e:
+            return json.dumps({"code": -1, "error": str(e)})
+
+    @pyqtSlot(result=str)
+    def update_system(self):
+        try:
+            repo_dir = "/home/ark/r36s-web-console"
+            if not os.path.exists(repo_dir):
+                return json.dumps({"code": -1, "error": "Repo not found"})
+            
+            subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=repo_dir, capture_output=True, text=True, check=True)
+            
+            print("Update applied. Restarting service...", flush=True)
+            subprocess.Popen(['sudo', 'systemctl', 'restart', 'web-console'])
+            return json.dumps({"code": 0, "status": "updated"})
+        except Exception as e:
+            print(f"Update failed: {e}", flush=True)
+            return json.dumps({"code": -1, "error": str(e)})
+
+def auto_update_thread():
+    print("Background fetch thread started...", flush=True)
+    while True:
+        # Check network
+        res = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'], capture_output=True)
+        if res.returncode == 0:
+            try:
+                repo_dir = "/home/ark/r36s-web-console"
+                if os.path.exists(repo_dir):
+                    subprocess.run(['git', 'fetch', 'origin'], cwd=repo_dir, capture_output=True, text=True)
+            except Exception as e:
+                print(f"Background fetch failed: {e}", flush=True)
+        # Wait 5 minutes before fetching again
+        time.sleep(300)
+
+threading.Thread(target=auto_update_thread, daemon=True).start()
 
 app = QApplication(sys.argv)
 
