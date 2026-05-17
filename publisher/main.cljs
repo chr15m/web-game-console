@@ -150,6 +150,14 @@
                  (.add (.-classList el) "notify")
                  (js/setTimeout #(.remove (.-classList el) "notify") 2000))))))
 
+(defn format-game-code [code]
+  (let [arr (js/Array.from code)
+        first-5 (.join (.slice arr 0 5) "")
+        rest (.join (.slice arr 5) "")]
+    [:span.formatted-code
+     [:span.code-highlight first-5]
+     [:span.code-rest rest]]))
+
 (defn upload-modal []
   (let [{:keys [stats error game-code publishing?]} @state]
     [:dialog {:open true}
@@ -162,7 +170,7 @@
          [:div.game-code-display.copyable 
           {:data-notification-text "Copied!"
            :on-click #(copy-to-clipboard % game-code)}
-          game-code]
+          [format-game-code game-code]]
          [:div.dialog-actions
           [:button {:on-click #(swap! state assoc :show-modal? false :game-code nil :stats nil)} "Close"]]]
         
@@ -222,7 +230,7 @@
               [:td (name gkey)]
               [:td.copyable {:data-notification-text "Copied!"
                              :on-click #(copy-to-clipboard % (:code data))}
-               [:code {:style {:letter-spacing "2px"}} (:code data)]]
+               [:code {:style {:letter-spacing "2px"}} [format-game-code (:code data)]]]
               [:td
                [:button {:on-click #(swap! state assoc :show-modal? true :game-name (name gkey))}
                 [:svg.icon-sm [:use {:href "#icon-upload"}]]]]])]]
