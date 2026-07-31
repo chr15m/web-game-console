@@ -11,6 +11,7 @@ os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
 
 import re
 import json
+import socket
 import subprocess
 from PyQt5.QtCore import QUrl, QObject, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow
@@ -61,12 +62,17 @@ class SystemApi(QObject):
             repo_dir = "/home/ark/r36s-web-console"
             if not os.path.exists(repo_dir):
                 return json.dumps({"code": -1, "error": "Repo not found"})
-            
-            res = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'], capture_output=True)
-            if res.returncode != 0:
+
+            try:
+                s = socket.create_connection(("github.com", 443), timeout=10)
+                s.close()
+            except OSError:
                 return json.dumps({"code": -1, "error": "No network"})
 
-            subprocess.run(['git', 'fetch', 'origin'], cwd=repo_dir, capture_output=True, text=True)
+            res = subprocess.run(['git', 'fetch', 'origin'], cwd=repo_dir, capture_output=True, text=True)
+            if res.returncode != 0:
+                return json.dumps({"code": -1, "error": res.stderr or "Git fetch failed"})
+
             return json.dumps({"code": 0, "status": "fetched"})
         except Exception as e:
             return json.dumps({"code": -1, "error": str(e)})
