@@ -30,16 +30,16 @@ You can develop and test games on your local machine without the physical device
 This opens a 720x720 Chromium window, auto-opens DevTools, and injects a keyboard-to-gamepad shim so you can navigate the UI using your keyboard (Arrow keys, Z/X/C/V, Enter, etc.).
 
 ### 2. Device Setup
-To prepare a fresh ArkOS R36S device:
+To prepare a fresh ArkOS R36S device (where `$IP` is set in your environment):
 ```bash
-./setup.sh <device-ip>
+./setup.sh $IP
 ```
 This is idempotent. It installs dependencies (PyQt5, emoji fonts), disables EmulationStation and GDM3, sets up the `web-console.service`, and copies the initial files.
 
 ### 3. Deploying Code
 When hacking on the Python browser wrapper or the HTML/JS UI, deploy your changes with:
 ```bash
-cd webkit-accel-test && ./deploy.sh <device-ip>
+cd webkit-accel-test && ./deploy.sh $IP
 ```
 This syncs the files, restarts the systemd service, and automatically opens an SSH tunnel for remote debugging.
 
