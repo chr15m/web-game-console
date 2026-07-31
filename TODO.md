@@ -8,6 +8,7 @@
 - [ ] Audio is laggy - some way to reduce buffer size?
 - [ ] An LLM document to explain how to build games, with examples
 - [ ] Support games with more than 1 file (?.localhost:8000 serving)
+- [ ] Doom test?
 
 **QtWebEngine / EGLFS Tasks:**
 
