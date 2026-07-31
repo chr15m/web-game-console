@@ -95,8 +95,8 @@ ssh $SSH_OPTS ark@$HOST "
     fi
 "
 
-echo "Syncing local changes to device..."
-rsync -avz -e "ssh $SSH_OPTS" --filter=':- .gitignore' "$SCRIPT_DIR/webkit-accel-test/" ark@$HOST:/home/ark/r36s-web-console/webkit-accel-test/
+# echo "Syncing local changes to device..."
+# rsync -avz -e "ssh $SSH_OPTS" --exclude='.*' "$SCRIPT_DIR/webkit-accel-test/" ark@$HOST:/home/ark/r36s-web-console/webkit-accel-test/
 
 echo "Installing web-console service..."
 rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/webkit-accel-test/web-console.service" ark@$HOST:/tmp/
