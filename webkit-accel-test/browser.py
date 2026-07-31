@@ -43,6 +43,35 @@ class SystemApi(QObject):
             return []
 
     @pyqtSlot(result=str)
+    def ip_address(self):
+        try:
+            res = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+            if res.returncode == 0:
+                ips = res.stdout.strip().split()
+                if ips:
+                    return ips[0]
+            return ""
+        except Exception as e:
+            print(f"Error fetching IP address: {e}", flush=True)
+            return ""
+
+    @pyqtSlot(result=str)
+    def fetch_update(self):
+        try:
+            repo_dir = "/home/ark/r36s-web-console"
+            if not os.path.exists(repo_dir):
+                return json.dumps({"code": -1, "error": "Repo not found"})
+            
+            res = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'], capture_output=True)
+            if res.returncode != 0:
+                return json.dumps({"code": -1, "error": "No network"})
+
+            subprocess.run(['git', 'fetch', 'origin'], cwd=repo_dir, capture_output=True, text=True)
+            return json.dumps({"code": 0, "status": "fetched"})
+        except Exception as e:
+            return json.dumps({"code": -1, "error": str(e)})
+
+    @pyqtSlot(result=str)
     def check_update(self):
         try:
             repo_dir = "/home/ark/r36s-web-console"
@@ -71,23 +100,6 @@ class SystemApi(QObject):
         except Exception as e:
             print(f"Update failed: {e}", flush=True)
             return json.dumps({"code": -1, "error": str(e)})
-
-def auto_update_thread():
-    print("Background fetch thread started...", flush=True)
-    while True:
-        # Check network
-        res = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'], capture_output=True)
-        if res.returncode == 0:
-            try:
-                repo_dir = "/home/ark/r36s-web-console"
-                if os.path.exists(repo_dir):
-                    subprocess.run(['git', 'fetch', 'origin'], cwd=repo_dir, capture_output=True, text=True)
-            except Exception as e:
-                print(f"Background fetch failed: {e}", flush=True)
-        # Wait 5 minutes before fetching again
-        time.sleep(300)
-
-threading.Thread(target=auto_update_thread, daemon=True).start()
 
 app = QApplication(sys.argv)
 

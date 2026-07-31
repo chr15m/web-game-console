@@ -74,6 +74,7 @@
 </head>
 <body tabindex="0">
     <h1>Wi-Fi Settings</h1>
+    <div id="ip-info" style="font-size: 1.1em; color: #aaa; margin-bottom: 10px;">IP: Checking...</div>
     <div id="status">Initializing...</div>
     <div id="network-list" class="menu"></div>
 
@@ -111,6 +112,13 @@
                                     res(resultList);
                                 });
                             });
+                        },
+                        ip_address: function() {
+                            return new Promise(res => {
+                                api.ip_address(function(ipStr) {
+                                    res(ipStr);
+                                });
+                            });
                         }
                     };
                     resolve(window.systemApi);
@@ -118,7 +126,8 @@
             } else {
                 window.systemApi = {
                     nmcli: async () => ({code: 0, stdout: "*:MyHomeNetwork:85:WPA2\n :GuestNetwork:60:\n :Escaped\\:Colon:40:WPA1 WPA2", stderr: ""}),
-                    connections: async () => (["MyHomeNetwork.nmconnection"])
+                    connections: async () => (["MyHomeNetwork.nmconnection"]),
+                    ip_address: async () => ("192.168.1.100")
                 };
                 resolve(window.systemApi);
             }
@@ -157,7 +166,18 @@
             ['Shift','Space','Bksp','Enter']
         ];
 
+        async function updateIpDisplay() {
+            await window.systemApiReady;
+            const ip = await window.systemApi.ip_address();
+            const ipEl = document.getElementById('ip-info');
+            if (ipEl) {
+                ipEl.textContent = ip ? `IP: ${ip}` : "IP: Not connected";
+            }
+        }
+
         async function loadNetworks(isInitial = false) {
+            updateIpDisplay();
+
             if (currentScreen !== 'list') {
                 setTimeout(() => loadNetworks(false), 5000);
                 return;

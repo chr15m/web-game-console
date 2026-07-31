@@ -15,7 +15,8 @@
         <div class="menu-item selected" data-href="app-gameloader.html">Enter gamecode</div>
         <div class="menu-item" data-action="tests">Tests</div>
         <div class="menu-item" data-href="app-wifi.html">Wi-Fi Settings</div>
-        <div class="menu-item disabled" data-action="update" id="update-btn">Console up to date</div>
+        <div class="menu-item" data-action="update" id="update-btn">Check for updates</div>
+        <div id="update-status" style="font-size: 0.8em; color: #888; text-align: center; margin-top: -10px; margin-bottom: 10px;"></div>
     </div>
 
     <!-- Tests Submenu -->
@@ -32,33 +33,52 @@
 
     <script>
         let systemApi = null;
-        let updateAvailable = false;
+        let updateState = 'check'; // 'check' or 'install'
+        let startupCheckDone = false;
 
-        function pollForUpdates() {
+        function checkLocalUpdates(showUpToDate) {
             if (!systemApi) return;
             systemApi.check_update(function(responseStr) {
                 try {
                     const response = JSON.parse(responseStr);
                     const btn = document.getElementById('update-btn');
+                    const status = document.getElementById('update-status');
                     if (response.code === 0 && response.update_available) {
-                        updateAvailable = true;
-                        btn.classList.remove('disabled');
-                        btn.innerText = "Update Console (New Version!)";
+                        updateState = 'install';
+                        btn.innerText = "Install update";
+                        status.innerText = "";
                     } else {
-                        updateAvailable = false;
-                        btn.classList.add('disabled');
-                        btn.innerText = "Console up to date";
+                        updateState = 'check';
+                        btn.innerText = "Check for updates";
+                        if (showUpToDate) {
+                            status.innerText = "Up to date";
+                        }
                     }
                 } catch (e) {}
+            });
+        }
+
+        function pollStartupUpdate() {
+            if (startupCheckDone || !systemApi) return;
+            systemApi.fetch_update(function(resStr) {
+                try {
+                    const res = JSON.parse(resStr);
+                    if (res.code === 0) {
+                        startupCheckDone = true;
+                        checkLocalUpdates(true);
+                    } else {
+                        setTimeout(pollStartupUpdate, 10000);
+                    }
+                } catch (e) {
+                    setTimeout(pollStartupUpdate, 10000);
+                }
             });
         }
 
         if (typeof QWebChannel !== 'undefined') {
             new QWebChannel(qt.webChannelTransport, function (channel) {
                 systemApi = channel.objects.systemApi;
-                // Check immediately, then every 10 seconds
-                pollForUpdates();
-                setInterval(pollForUpdates, 10000);
+                pollStartupUpdate();
             });
         }
 
@@ -110,22 +130,41 @@
                 if (action === 'tests') {
                     switchToScreen('tests');
                 } else if (action === 'update') {
-                    if (systemApi && updateAvailable) {
-                        item.innerText = "Applying update & restarting...";
-                        systemApi.update_system(function(responseStr) {
-                            // If it succeeds, the console will restart.
-                            // If it fails, we just reset the text.
-                            try {
-                                const response = JSON.parse(responseStr);
-                                if (response.code !== 0) {
-                                    item.innerText = "Update failed";
-                                    setTimeout(pollForUpdates, 2000);
+                    if (systemApi) {
+                        const status = document.getElementById('update-status');
+                        if (updateState === 'check') {
+                            item.innerText = "Checking...";
+                            status.innerText = "";
+                            systemApi.fetch_update(function(resStr) {
+                                try {
+                                    const res = JSON.parse(resStr);
+                                    if (res.code === 0) {
+                                        checkLocalUpdates(true);
+                                    } else {
+                                        item.innerText = "Check for updates";
+                                        status.innerText = "Network error";
+                                    }
+                                } catch (e) {
+                                    item.innerText = "Check for updates";
+                                    status.innerText = "Error checking";
                                 }
-                            } catch (e) {
-                                item.innerText = "Update failed";
-                                setTimeout(pollForUpdates, 2000);
-                            }
-                        });
+                            });
+                        } else if (updateState === 'install') {
+                            item.innerText = "Installing & restarting...";
+                            status.innerText = "";
+                            systemApi.update_system(function(responseStr) {
+                                try {
+                                    const response = JSON.parse(responseStr);
+                                    if (response.code !== 0) {
+                                        item.innerText = "Install update";
+                                        status.innerText = "Update failed";
+                                    }
+                                } catch (e) {
+                                    item.innerText = "Install update";
+                                    status.innerText = "Update failed";
+                                }
+                            });
+                        }
                     }
                 } else if (href) {
                     window.location.href = href;
