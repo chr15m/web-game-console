@@ -13,7 +13,7 @@ import re
 import json
 import socket
 import subprocess
-from PyQt5.QtCore import QUrl, QObject, pyqtSlot
+from PyQt5.QtCore import QUrl, QObject, pyqtSlot, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript
 from PyQt5.QtWebChannel import QWebChannel
@@ -106,6 +106,20 @@ class SystemApi(QObject):
         except Exception as e:
             print(f"Update failed: {e}", flush=True)
             return json.dumps({"code": -1, "error": str(e)})
+
+    @pyqtSlot(result=str)
+    def take_screenshot(self):
+        try:
+            screen = QApplication.primaryScreen()
+            if screen:
+                pixmap = screen.grabWindow(0)
+                pixmap.save("/tmp/screenshot.png")
+                print("Screenshot saved to /tmp/screenshot.png", flush=True)
+                return "ok"
+            return "no_screen"
+        except Exception as e:
+            print(f"Error taking screenshot: {e}", flush=True)
+            return str(e)
 
 app = QApplication(sys.argv)
 
