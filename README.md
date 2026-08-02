@@ -46,9 +46,16 @@ This syncs the files, restarts the systemd service, and automatically opens an S
 ### 4. Remote Debugging
 After running `deploy.sh`, open a Chromium-based browser on your local machine and navigate to:
 ```
-http://localhost:9222
+chrome://inspect/#devices
 ```
 You will have full access to the Chrome DevTools for the web view running on the R36S.
+
+### 5. Restarting & Reloading
+- **Restart Browser**: Restart the systemd service over SSH:
+  ```bash
+  ssh ark@$IP "sudo systemctl restart web-console"
+  ```
+- **Reload Page**: Press `Ctrl+R` (`Cmd+R` on macOS) inside the DevTools inspector, or run `location.reload()` in the console.
 
 ## Key Files
 
