@@ -153,22 +153,48 @@
     <script>
       const fontSelect = document.getElementById('font-select');
       const capsCheck = document.getElementById('caps-check');
-      const textLine1 = document.querySelector('#curve-line1 + text, #title-lines text:first-of-type textPath');
-      const textLine2 = document.querySelector('#title-lines text:last-of-type textPath');
-      const titleTexts = document.querySelectorAll('.title-text');
+      const textPath1 = document.querySelector('#title-lines text:first-of-type textPath');
+      const textPath2 = document.querySelector('#title-lines text:last-of-type textPath');
+      const textElem1 = document.querySelector('#title-lines text:first-of-type');
+      const textElem2 = document.querySelector('#title-lines text:last-of-type');
 
       const originalLine1 = "Web Game";
       const originalLine2 = "Console";
+      const baseFontSize = 116;
+      const maxTextLength = 540;
 
-      fontSelect.addEventListener('change', (e) => {
-        titleTexts.forEach(el => el.style.fontFamily = e.target.value);
-      });
+      function fitText() {
+        const adjust = (elem, path) => {
+          let size = baseFontSize;
+          elem.style.fontSize = size + 'px';
+          let len = path.getComputedTextLength();
+          while (len > maxTextLength && size > 30) {
+            size -= 2;
+            elem.style.fontSize = size + 'px';
+            len = path.getComputedTextLength();
+          }
+        };
 
-      capsCheck.addEventListener('change', (e) => {
-        const caps = e.target.checked;
-        textLine1.textContent = caps ? originalLine1.toUpperCase() : originalLine1;
-        textLine2.textContent = caps ? originalLine2.toUpperCase() : originalLine2;
-      });
+        adjust(textElem1, textPath1);
+        adjust(textElem2, textPath2);
+      }
+
+      function update() {
+        const font = fontSelect.value;
+        const caps = capsCheck.checked;
+
+        textElem1.style.fontFamily = font;
+        textElem2.style.fontFamily = font;
+        textPath1.textContent = caps ? originalLine1.toUpperCase() : originalLine1;
+        textPath2.textContent = caps ? originalLine2.toUpperCase() : originalLine2;
+
+        document.fonts.ready.then(fitText);
+      }
+
+      fontSelect.addEventListener('change', update);
+      capsCheck.addEventListener('change', update);
+
+      document.fonts.ready.then(fitText);
     </script>
   </body>
 </html>
