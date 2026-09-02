@@ -29,7 +29,7 @@
         height: min(100vw, 100vh);
         max-width: 720px;
         max-height: 720px;
-        background: #545860;
+        background: #3D3846;
         position: relative;
         overflow: hidden;
         display: flex;
@@ -223,10 +223,11 @@
       </div>
       <div class="color-row">
         <span>BG:</span>
-        <button type="button" class="color-circle bg-color-btn" data-color="#545860" style="background: #545860;" title="Default Slate"></button>
+        <button type="button" class="color-circle bg-color-btn" data-color="#3D3846" style="background: #3D3846;" title="#3D3846"></button>
+        <button type="button" class="color-circle bg-color-btn" data-color="#545860" style="background: #545860;" title="Slate"></button>
         <button type="button" class="color-circle bg-color-btn" data-color="#2a2c30" style="background: #2a2c30;" title="50% Darker Slate"></button>
         <label class="color-circle color-picker-btn" title="Custom BG color">
-          <input type="color" id="custom-bg-color-picker" value="#545860">
+          <input type="color" id="custom-bg-color-picker" value="#3D3846">
         </label>
       </div>
       <textarea id="settings-output" readonly rows="5" style="width: 100%; font-family: monospace; font-size: 11px; background: #1a1b1e; color: #a5d6a7; border: 1px solid #444; border-radius: 4px; padding: 6px; resize: none;"></textarea>
@@ -371,7 +372,7 @@
       const customColorPicker = document.getElementById('custom-color-picker');
       const customBgColorPicker = document.getElementById('custom-bg-color-picker');
       let titleColor = '#F02828';
-      let bgColor = '#545860';
+      let bgColor = '#3D3846';
       let doodleColor = '#727782';
 
       const presets = [
@@ -636,6 +637,7 @@
       }
 
       initDoodleBackground();
+      setBgColor(bgColor);
 
       document.fonts.ready.then(() => applyPreset(0));
     </script>
