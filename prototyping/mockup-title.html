@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Game Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap" rel="stylesheet">
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        background: #111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      #screen {
+        width: min(100vw, 100vh);
+        height: min(100vw, 100vh);
+        max-width: 720px;
+        max-height: 720px;
+        background: #545860;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .title-container {
+        width: 100%;
+        padding: 0 20px;
+        margin-top: 30px;
+      }
+
+      .curved-title {
+        width: 100%;
+        height: auto;
+        display: block;
+        overflow: visible;
+      }
+
+      .title-text {
+        font-family: 'Darumadrop One', cursive, sans-serif;
+        font-size: 116px;
+        letter-spacing: 3px;
+        stroke-width: 24px;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        paint-order: stroke fill;
+        dominant-baseline: middle;
+      }
+
+      .extrude {
+        fill: #212123;
+        stroke: #212123;
+      }
+
+      .front {
+        fill: #D72727;
+        stroke: #212123;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="screen">
+      <div class="title-container">
+        <svg class="curved-title" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <path id="curve-line1" d="M 20 105 Q 350 20 680 105"></path>
+            <path id="curve-line2" d="M 20 235 Q 350 150 680 235"></path>
+            <g id="title-lines">
+              <text class="title-text">
+                <textPath href="#curve-line1" text-anchor="middle" startOffset="50%">
+                  Web Game
+                </textPath>
+              </text>
+              <text class="title-text">
+                <textPath href="#curve-line2" text-anchor="middle" startOffset="50%">
+                  Console
+                </textPath>
+              </text>
+            </g>
+          </defs>
+          <use href="#title-lines" y="20" class="extrude" />
+          <use href="#title-lines" y="15" class="extrude" />
+          <use href="#title-lines" y="10" class="extrude" />
+          <use href="#title-lines" y="5" class="extrude" />
+          <use href="#title-lines" y="0" class="front" />
+        </svg>
+      </div>
+    </div>
+  </body>
+</html>
