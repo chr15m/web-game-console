@@ -92,6 +92,7 @@
         height: auto;
         display: block;
         overflow: visible;
+        filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.2));
       }
 
       .title-text {
@@ -133,15 +134,17 @@
         font-family: 'Comic Mono', monospace;
         font-weight: bold;
         text-transform: lowercase;
-        color: #F02828;
+        color: #E5A50A;
         -webkit-text-stroke: 6px #212123;
         paint-order: stroke fill;
         font-size: 28.5px;
         letter-spacing: 1.5px;
         cursor: pointer;
         user-select: none;
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
         transition: font-size 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
                     padding 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    filter 0.25s ease,
                     -webkit-text-stroke 0.2s ease;
         text-align: center;
         line-height: 1.1;
@@ -152,6 +155,7 @@
         font-size: 57px;
         -webkit-text-stroke: 11px #212123;
         padding: 9px 0;
+        filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.25));
         animation: menu-pop-bounce 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
@@ -284,6 +288,16 @@
         <button type="button" class="color-circle title-color-btn" data-color="#E5A50A" style="background: #E5A50A;" title="Yellow"></button>
         <label class="color-circle color-picker-btn" title="Custom title color">
           <input type="color" id="custom-color-picker" value="#F02828">
+        </label>
+      </div>
+      <div class="color-row">
+        <span>Menu:</span>
+        <button type="button" class="color-circle menu-color-btn" data-color="#E5A50A" style="background: #E5A50A;" title="Yellow"></button>
+        <button type="button" class="color-circle menu-color-btn" data-color="#33D17A" style="background: #33D17A;" title="Green"></button>
+        <button type="button" class="color-circle menu-color-btn" data-color="#F02828" style="background: #F02828;" title="Red"></button>
+        <button type="button" class="color-circle menu-color-btn" data-color="#3584E4" style="background: #3584E4;" title="Blue"></button>
+        <label class="color-circle color-picker-btn" title="Custom menu color">
+          <input type="color" id="custom-menu-color-picker" value="#E5A50A">
         </label>
       </div>
       <div class="color-row">
@@ -441,10 +455,12 @@
       const screenElem = document.getElementById('screen');
       const doodlesLayer = document.getElementById('doodles-layer');
       const customColorPicker = document.getElementById('custom-color-picker');
+      const customMenuColorPicker = document.getElementById('custom-menu-color-picker');
       const customBgColorPicker = document.getElementById('custom-bg-color-picker');
       const menuItems = Array.from(document.querySelectorAll('.menu-item'));
       let selectedMenuIdx = 0;
       let titleColor = '#F02828';
+      let menuColor = '#E5A50A';
       let bgColor = '#3D3846';
       let doodleColor = '#727782';
 
@@ -495,6 +511,7 @@
           `Font: ${fontName}`,
           `Font Family: ${fontSelect.value}`,
           `Title Color: ${titleColor}`,
+          `Menu Color: ${menuColor}`,
           `Background Color: ${bgColor}`,
           `Doodle Color: ${doodleColor}`,
           `All Caps: ${capsCheck.checked}`,
@@ -505,10 +522,13 @@
         settingsOutput.value = out;
       }
 
-      function updateMenuColors() {
+      function setMenuColor(color) {
+        menuColor = color;
+        customMenuColorPicker.value = color;
         menuItems.forEach(item => {
-          item.style.color = titleColor;
+          item.style.color = menuColor;
         });
+        updateSettingsText();
       }
 
       function updateMenuSelection(newIdx) {
@@ -548,7 +568,6 @@
         titleColor = color;
         frontElem.style.fill = color;
         customColorPicker.value = color;
-        updateMenuColors();
         updateSettingsText();
       }
 
@@ -633,6 +652,16 @@
 
       customColorPicker.addEventListener('input', (e) => {
         setTitleColor(e.target.value);
+      });
+
+      document.querySelectorAll('.menu-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          setMenuColor(btn.dataset.color);
+        });
+      });
+
+      customMenuColorPicker.addEventListener('input', (e) => {
+        setMenuColor(e.target.value);
       });
 
       document.querySelectorAll('.bg-color-btn').forEach(btn => {
@@ -751,7 +780,7 @@
 
       initDoodleBackground();
       setBgColor(bgColor);
-      updateMenuColors();
+      setMenuColor(menuColor);
 
       document.fonts.ready.then(() => applyPreset(0));
     </script>
