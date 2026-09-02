@@ -149,12 +149,12 @@
       }
 
       .menu-item {
+        position: relative;
         font-family: 'Comic Mono', monospace;
         font-weight: bold;
         text-transform: lowercase;
-        color: #E5A50A;
+        color: #212123;
         -webkit-text-stroke: 6px #212123;
-        paint-order: stroke fill;
         font-size: 28.5px;
         letter-spacing: 1.5px;
         cursor: pointer;
@@ -169,12 +169,27 @@
         padding: 6px 0;
       }
 
+      .menu-item::after {
+        content: attr(data-text);
+        position: absolute;
+        left: 0;
+        top: 6px;
+        width: 100%;
+        color: #E5A50A;
+        -webkit-text-stroke: 0;
+        pointer-events: none;
+      }
+
       .menu-item.selected {
         font-size: 57px;
         -webkit-text-stroke: 11px #212123;
         padding: 9px 0;
         filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.25));
         animation: menu-pulse 0.5s ease-in-out infinite;
+      }
+
+      .menu-item.selected::after {
+        top: 9px;
       }
 
       @keyframes menu-pulse {
@@ -304,10 +319,10 @@
         </svg>
       </div>
       <div id="main-menu" class="menu-container">
-        <div class="menu-item selected" data-href="browse.html">browse games</div>
-        <div class="menu-item" data-href="app-gameloader.html">enter gamecode</div>
-        <div class="menu-item" data-href="app-wifi.html">wifi settings</div>
-        <div class="menu-item" data-action="update" id="update-btn">check for updates</div>
+        <div class="menu-item selected" data-text="browse games" data-href="browse.html">browse games</div>
+        <div class="menu-item" data-text="enter gamecode" data-href="app-gameloader.html">enter gamecode</div>
+        <div class="menu-item" data-text="wifi settings" data-href="app-wifi.html">wifi settings</div>
+        <div class="menu-item" data-text="check for updates" data-action="update" id="update-btn">check for updates</div>
       </div>
       <div id="update-status"></div>
     </div>
@@ -316,6 +331,11 @@
         let systemApi = null;
         let updateState = 'check'; // 'check' or 'install'
         let startupCheckDone = false;
+
+        function setMenuItemText(item, text) {
+            item.innerText = text;
+            item.setAttribute('data-text', text);
+        }
 
         function checkLocalUpdates(showUpToDate) {
             if (!systemApi) return;
@@ -326,11 +346,11 @@
                     const status = document.getElementById('update-status');
                     if (response.code === 0 && response.update_available) {
                         updateState = 'install';
-                        btn.innerText = "install update";
+                        setMenuItemText(btn, "install update");
                         status.innerText = "";
                     } else {
                         updateState = 'check';
-                        btn.innerText = "check for updates";
+                        setMenuItemText(btn, "check for updates");
                         if (showUpToDate) {
                             status.innerText = "up to date";
                         }
@@ -395,7 +415,7 @@
                 if (systemApi) {
                     const status = document.getElementById('update-status');
                     if (updateState === 'check') {
-                        item.innerText = "checking...";
+                        setMenuItemText(item, "checking...");
                         status.innerText = "";
                         systemApi.fetch_update(function(resStr) {
                             try {
@@ -403,26 +423,26 @@
                                 if (res.code === 0) {
                                     checkLocalUpdates(true);
                                 } else {
-                                    item.innerText = "check for updates";
+                                    setMenuItemText(item, "check for updates");
                                     status.innerText = "network error";
                                 }
                             } catch (e) {
-                                item.innerText = "check for updates";
+                                setMenuItemText(item, "check for updates");
                                 status.innerText = "error checking";
                             }
                         });
                     } else if (updateState === 'install') {
-                        item.innerText = "installing & restarting...";
+                        setMenuItemText(item, "installing & restarting...");
                         status.innerText = "";
                         systemApi.update_system(function(responseStr) {
                             try {
                                 const response = JSON.parse(responseStr);
                                 if (response.code !== 0) {
-                                    item.innerText = "install update";
+                                    setMenuItemText(item, "install update");
                                     status.innerText = "update failed";
                                 }
                             } catch (e) {
-                                item.innerText = "install update";
+                                setMenuItemText(item, "install update");
                                 status.innerText = "update failed";
                             }
                         });
