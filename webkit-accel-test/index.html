@@ -1,35 +1,319 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>R36S Web Console Menu</title>
-    <link rel="stylesheet" href="common.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Game Console</title>
+    <style>
+      @font-face {
+        font-family: 'Luckiest Guy';
+        src: url('LuckiestGuy-Regular.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Comic Mono';
+        src: url('ComicMono.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Comic Mono';
+        src: url('ComicMono-Bold.ttf') format('truetype');
+        font-weight: bold;
+        font-style: normal;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        background: #111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      #screen {
+        width: min(100vw, 100vh);
+        height: min(100vw, 100vh);
+        max-width: 720px;
+        max-height: 720px;
+        background: #3D3846;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .doodles-background {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 200%;
+        height: 200%;
+        pointer-events: none;
+        z-index: 1;
+        color: #727782;
+        opacity: 0.55;
+        animation: doodle-drift 50s linear infinite;
+        will-change: transform;
+      }
+
+      @keyframes doodle-drift {
+        0% {
+          transform: translate3d(0, 0, 0);
+        }
+        100% {
+          transform: translate3d(50%, -50%, 0);
+        }
+      }
+
+      .doodle-item {
+        position: absolute;
+        overflow: visible;
+      }
+
+      .title-container {
+        width: 100%;
+        padding: 0 20px;
+        margin-top: 55px;
+        margin-bottom: 15px;
+        position: relative;
+        z-index: 2;
+        animation: title-bob 3s ease-in-out infinite;
+      }
+
+      @keyframes title-bob {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+
+      .curved-title {
+        width: 100%;
+        height: auto;
+        display: block;
+        overflow: visible;
+        filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.2));
+      }
+
+      .title-text {
+        font-family: 'Luckiest Guy', cursive, sans-serif;
+        letter-spacing: 10px;
+        stroke-width: 24px;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        paint-order: stroke fill;
+        dominant-baseline: middle;
+      }
+
+      .title-text textPath:first-of-type {
+        font-size: 98px;
+      }
+
+      .title-text textPath:last-of-type {
+        font-size: 116px;
+      }
+
+      .extrude {
+        fill: #212123;
+        stroke: #212123;
+      }
+
+      .front {
+        fill: #F02828;
+        stroke: #212123;
+      }
+
+      .menu-container {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 16px;
+        margin-top: 0;
+        margin-bottom: 24px;
+      }
+
+      .menu-item {
+        font-family: 'Comic Mono', monospace;
+        font-weight: bold;
+        text-transform: lowercase;
+        color: #E5A50A;
+        -webkit-text-stroke: 6px #212123;
+        paint-order: stroke fill;
+        font-size: 28.5px;
+        letter-spacing: 1.5px;
+        cursor: pointer;
+        user-select: none;
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
+        transition: font-size 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    padding 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    filter 0.25s ease,
+                    -webkit-text-stroke 0.2s ease;
+        text-align: center;
+        line-height: 1.1;
+        padding: 6px 0;
+      }
+
+      .menu-item.selected {
+        font-size: 57px;
+        -webkit-text-stroke: 11px #212123;
+        padding: 9px 0;
+        filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.25));
+        animation: menu-pulse 0.5s ease-in-out infinite;
+      }
+
+      @keyframes menu-pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      #update-status {
+        position: absolute;
+        bottom: 8px;
+        font-family: 'Comic Mono', monospace;
+        font-size: 14px;
+        color: #aaa;
+        z-index: 3;
+      }
+    </style>
     <script src="gamepad.js"></script>
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
 <body tabindex="0">
-    <h1>Select Demo</h1>
+    <svg style="display: none;">
+      <defs>
+        <symbol id="icon-tamagotchi" viewBox="9281.5 15515.9 96.4 107.5">
+          <g>
+            <path d="m 9328.5572,15610.78 c 5.6914,0.3264 11.2582,-0.876 16.72,-2.31 4.9746,-0.3061 8.1302,-4.5219 11.96,-7.13 4.0296,-3.0501 5.5566,-8.0286 6.61,-12.75 1.4604,-3.8566 2.0933,-7.9247 1.98,-12.04 0.388,-5.6041 -0.7199,-11.1899 -1.86,-16.64 -1.4194,-4.2033 -3.0369,-8.3978 -5.11,-12.32 -2.8885,-3.0287 -4.7819,-6.8374 -7.61,-9.88 -2.1486,-2.1429 -4.8066,-3.4598 -7.37,-4.9225 -2.2433,-0.8189 -4.4177,-2.2162 -6.68,-3.0475 -2.1466,-0.7976 -4.5872,-1.5324 -6.85,-1.81 -2.3112,-0.064 -4.7251,-0.1624 -7.1675,0.1825 -4.2254,1.4901 -8.0115,3.6189 -11.6125,6.1575 -3.4153,2.9306 -6.2701,6.4447 -9.49,9.58 -3.1695,3.9903 -4.0893,9.1957 -5.76,13.9 -2.0665,8.5474 -2.9134,17.3688 -2.85,26.16 0.3695,5.0544 2.02,10.1215 4.78,14.38 0.953,1.3526 2.065,2.527 3.26,3.51 1.5076,1.1155 2.9177,2.277 4.33,3.62 1.8407,1.6373 3.7817,3.3976 6.21,4.14 5.3986,2.6204 11.6076,1.2841 17.4,1.7 1.1901,-0.054 2.3615,0.1943 3.55,0.21" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9314.397,15589.948 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9328.2784,15594.253 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9344.2418,15591.614 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9311.0656,15552.587 c -0.3203,8.4732 -0.013,16.955 0.06,25.42 2.6338,1.1739 6.1754,0.024 9.15,0.41 7.8714,-0.2532 15.7335,1.0482 23.59,0.05 3.1017,0.6315 5.6858,-0.4376 4.68,-4.01 -0.7583,-4.245 -1.66,-8.8383 -1.7257,-13.477 1.3831,-3.7171 -1.7677,-5.1541 -4.96,-5.08 -8.2823,-0.881 -16.6061,-1.2563 -24.94,-1.09 -1.6662,-0.2101 -3.3203,-0.5655 -4.98,-0.84" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-gameboy" viewBox="9281.4 15733.6 98.8 117.0">
+          <g>
+            <path d="M 9366.5082,15745.583 C 9358.5589,15746.177 9346.0407,15746.14 9338.0879,15746.374 c -5.7899,1.0545 -11.7066,0.7653 -17.5702,0.9 -6.6361,0.026 -13.2924,0.1422 -19.8598,-0.97 -3.1905,-0.6421 -7.6763,0.1506 -7.26,4.37 -0.1685,9.9752 -0.008,19.956 0.64,29.9 -0.1231,6.9409 1.0843,13.8182 0.7,20.77 0.0578,9.5048 -0.2675,18.9977 -0.85,28.48 0.3926,2.9574 -1.501,8.115 2.78,8.8 5.0099,0.6705 10.109,0.1583 15.14,-0.07 7.0503,-0.7751 14.3798,-0.7248 21.507,-0.3327 7.0934,0.8633 13.4881,0.8918 20.1631,-0.2512 3.8774,-0.4308 9.1081,-4.1532 11.2843,-7.5637 3.8023,-7.7238 3.456,-14.3872 3.8357,-22.8464 0.1033,-8.5488 -0.5026,-17.0718 -0.98,-25.6 -0.5711,-5.7146 -0.3363,-11.4136 -0.5507,-16.924 -0.2982,-5.5746 -0.0915,-13.5601 -0.1191,-19.0172" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9306.2433,15759.487 c 4.0589,1.8224 8.3565,3.569 12.8924,3.27 4.6154,-0.0378 9.2892,0.269 13.8076,-0.9 4.2026,-0.6645 8.3816,-1.4501 12.53,-2.4 2.3316,-0.1541 5.2686,-1.7409 7.24,-0.13 0.8233,2.7772 0.4164,5.779 0.2775,8.635 -0.3392,3.3168 -0.4865,6.6547 -0.57,9.9625 -0.3913,3.7899 -0.8321,7.594 -0.4575,11.4125 0.8267,3.6943 -3.8271,2.4283 -6.04,2.6725 -6.5258,0.2479 -12.9725,-0.045 -19.4256,0.086 -4.7928,-0.024 -9.5919,-0.095 -14.3675,0.31 -2.8109,0.874 -4.5498,-1.4781 -4.5025,-4.075 -0.9278,-5.2367 -1.2407,-10.581 -1.0975,-15.905 -0.029,-3.2522 0.006,-6.5058 -0.01,-9.76" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9316.3053,15803.852 c -0.018,4.7339 0.4243,8.8068 0.4243,8.8068 0.211,1.2027 0.316,2.423 0.5587,3.6193 0.2438,2.5103 0.102,5.047 0.14,7.57" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9306.2357,15813.708 c 3.4162,1.2285 6.6473,0.7362 10.3163,0.964 1.3575,0.1682 2.7284,0.051 4.0894,0.1362 1.2065,-0.007 2.4158,-0.065 3.6256,-0.1675 1.1608,-0.098 2.3138,-0.269 3.4744,-0.37" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9341.1566,15821.952 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9352.3352,15812.488 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-pacman" viewBox="9283.7 15294.5 91.9 104.0">
+          <g>
+            <path d="m 9335.8461,15345.684 c 3.5469,4.4482 7.7661,8.2945 12.57,11.35 4.8388,3.8519 8.0617,9.2769 12.92,13.12 4.2699,3.0129 -0.0297,8.4934 -3.32,10.37 -5.4526,3.303 -11.8107,5.0114 -18.09,5.88 -5.7568,0.4284 -11.6472,-0.002 -17.01,-2.29 -5.7027,-1.3515 -11.5538,-3.763 -14.83,-8.91 -3.669,-4.4741 -9.1284,-7.8422 -10.6,-13.78 -2.7946,-6.8519 -1.603,-14.4004 -1.82,-21.5975 0.6018,-2.4921 1.1164,-4.9838 1.81,-7.4525 0.6817,-2.6788 1.9162,-5.2015 3.74,-7.3 1.7514,-1.9499 3.2782,-4.0319 5.0025,-5.9725 1.2586,-2.0928 3.045,-3.6642 4.9075,-5.1775 2.3663,-1.5796 5.02,-2.7137 7.75,-3.66 6.8246,-3.0519 14.5867,-4.0862 22.14,-3.81 5.8787,-0.11 11.8913,1.8596 15.93,6.26 2.4422,2.3197 7.4642,5.1626 6.63,8.86 -1.7025,1.836 -3.8061,3.2102 -5.55,4.92 -1.67,1.5559 -3.344,2.9483 -4.86,4.6925 -1.68,1.3251 -3.253,2.7574 -5.06,3.9575 -2.0125,1.4342 -3.7166,3.2206 -5.28,5.06 -1.5102,1.9683 -2.6016,4.3869 -3.8713,6.6815 l 2.0252,2.9985" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9332.4451,15325.867 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-ghost" viewBox="9505.1 15283.9 97.2 125.2">
+          <g>
+            <path d="m 9533.69,15333.505 c 0.2996,3.7494 0.2193,7.5211 0.35,11.27 1.7674,2.0265 5.2555,0.7416 7.71,1.12" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9555.7162,15332.497 c 0.1502,4.6092 0.2243,9.3239 0.66,13.86 2.2172,0.7992 4.7876,0.1686 7.12,0.26" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9517.2753,15393.434 c -0.334,-6.6774 -0.1077,-13.3741 -0.16,-20.05 0.2155,-6.316 0.6245,-12.6182 0.3,-18.94 -0.0649,-7.2163 0.1973,-14.4275 0.45,-21.63 0.8986,-7.9625 2.7278,-16.0053 6.64,-23.06 3.5453,-4.2893 8.3838,-7.24 12.87,-10.43 4.9162,-3.1494 10.8207,-3.6768 16.51,-3.42 6.2045,-0.2463 12.5419,1.5672 17.72,4.67 1.6143,0.9585 3.4878,1.8373 4.76,3.3 1.2776,1.2092 2.4963,2.6176 3.49,4.11 1.5485,2.1621 3.1424,4.3043 4.9975,6.2875 4.2556,7.0432 3.1367,15.7401 3.9925,23.6325 0.2051,6.9994 0.7547,13.9826 1,20.98 -0.0121,9.4855 -0.0701,18.9701 0.43,28.44 -0.2068,3.2038 0.4713,6.6108 -0.38,9.69 -1.4453,-0.3509 -2.3486,-2.0446 -3.8,-2.6375 -3.0222,-2.1234 -4.9869,-5.4532 -7.37,-8.3925 -1.6289,-2.1831 -3.1788,-4.6477 -5.5675,-5.98 -4.6888,1.29 -8.1197,5.2741 -11.4425,8.61 -2.8897,2.3098 -4.3621,6.3151 -7,8.5 -2.5714,-1.8483 -5.9065,-5.4818 -8.4478,-9.5382 -2.5268,-2.5784 -5.846,-4.2322 -8.64,-6.47 -3.2587,-0.068 -5.8078,2.9536 -8.56,4.48 -3.3655,2.9127 -5.4196,7.105 -9.1858,9.644 l -0.2119,0.1847 -0.1622,0.1413" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-joystick" viewBox="9508.9 15722.3 98.8 115.7">
+          <g>
+            <path d="m 9522.0366,15797.865 c 6.9223,0.5694 13.8738,0.017 20.81,0.13 12.2662,-1.1077 24.6222,-0.432 36.93,-0.62 4.3299,0.1188 8.6908,-0.2483 13,0.21 2.2476,2.9385 1.5774,7.4379 2.21,11.01 0.2698,5.2208 0.7115,10.4468 0.625,15.6725 -2.074,1.9716 -5.4981,0.9213 -8.145,1.4075 -8.336,0.5576 -16.8796,0.6457 -25.23,-0.4 -7.2084,-0.4449 -13.7153,-1.2723 -20.1866,-0.285 -6.3228,0.01 -12.6757,0.8246 -18.97,0.58 -2.8174,-3.0471 -2.0456,-7.8102 -1.78,-11.64 0.02,-4.8145 0.6113,-9.6031 1.01,-14.39" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9538.0671,15795.41 c 2.9464,-7.4979 1.5961,-15.6337 2.08,-23.44 2.2334,-2.7554 6.3876,-2.6098 9.37,-4.28 4.714,-1.5486 7.2093,-6.3765 7.43,-11.09 0.2783,-6.1308 0.7279,-13.2446 -4.0425,-17.925 -1.9558,-1.4062 -4.2535,-2.356 -6.5175,-3.115 -2.4467,-0.8168 -5.0013,-1.6684 -7.63,-1.25 -2.6733,0.2738 -5.4829,0.8534 -7.89,2.25 -1.5864,0.9586 -3.2557,1.8694 -4.73,2.95 -2.419,1.3601 -4.4946,3.6004 -5.28,6.46 -1.7596,5.6754 2.145,10.9796 5.26,15.34 2.1028,3.3309 5.6456,5.7032 9.69,5.64 1.2613,0.038 2.4868,0.3546 3.74,0.47" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9559.6749,15797.211 c 0.4707,-4.0043 -1.4934,-9.2715 0.81,-12.51 5.0075,-1.2974 10.2736,-0.9459 15.31,-2.22 2.5934,-0.1497 8.6796,-2.1068 6.96,2.69 -0.4276,2.6972 -0.808,5.3999 -1.16,8.11" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-mushroom" viewBox="9493.0 15516.0 107.4 107.0">
+          <g>
+            <path d="m 9524.2069,15596.438 c -4.5464,-2.3962 -10.3115,-3.4878 -13.07,-8.3 -3.2015,-3.9459 -5.3711,-8.8329 -6.09,-13.86 -0.1901,-5.1401 -0.1198,-10.362 1.77,-15.23 2.3475,-6.0388 4.1402,-12.9912 9.8,-16.87 3.6167,-3.9298 8.5154,-6.0917 12.98,-8.84 5.4576,-4.5345 12.7578,-5.6308 19.64,-5.35 7.3143,-0.1038 14.549,2.0835 20.61,6.18 3.3569,1.7844 6.8386,3.5743 9,6.84 3.725,3.7369 7.6582,7.8135 8.43,13.29 0.7691,3.332 0.5821,6.6627 0.85,9.94 0.1908,1.435 0.3329,2.8285 0.29,4.3 0.023,1.5757 0.003,3.1668 0.01,4.73 -0.006,1.4984 0.038,3.0078 -0.09,4.56 0.0001,1.7449 -0.2057,3.4583 -0.47,5.15 -0.1928,1.463 -0.5145,2.7792 -1.25,4.0225 -0.4748,1.4433 -1.5698,2.5095 -2.6,3.5075 -1.0662,0.9726 -2.686,1.1824 -3.8525,1.9775 -1.7319,0.5358 -3.7657,0.784 -5.7575,1.1225" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9525.188,15578.957 c -0.965,7.2607 -2.4744,14.9727 -0.01,22.09 1.7082,3.2168 4.1617,6.3656 7.48,8.01 6.5086,2.7225 13.7216,2.6731 20.61,1.92 4.0349,-0.3078 8.3811,-0.3845 12,-2.34 4.6655,-4.4536 4.109,-11.3816 4.91,-17.26 0.4243,-3.6458 -0.1724,-7.3297 -0.5536,-10.927 -2.4656,-2.7069 -6.5373,-2.9811 -9.8,-4.32 -6.0303,-1.6439 -12.4059,-1.0925 -18.59,-0.99 -4.3565,0.5723 -8.9476,1.0027 -12.535,3.8175 -0.6958,0.452 -1.3848,0.9129 -2.095,1.3425" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9538.4745,15591.511 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9556.8174,15590.569 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9573.167,15556.185 c -3.0773,0.1715 -8.305,1.6355 -6.19,5.73 0.9997,3.2127 5.2227,3.042 6.83,0.46 2.2791,-2.827 1.5647,-4.6185 -0.76,-7.17" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9555.0826,15530.58 c 0.3113,4.3768 0.3677,9.2285 3.69,12.39 2.4649,2.1865 7.5345,1.0918 7.31,-2.73 0.7701,-3.2331 -2.3563,-5.1584 -3.74,-7.69" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9527.3994,15540.181 c 3.2249,1.8044 7.2744,3.8866 7.4,8.11 0.783,3.6167 0.004,8.5107 -3.68,10.22 -3.9918,1.0947 -9.788,0.2482 -10.86,-4.49 -0.8798,-3.1865 2.0265,-6.7323 5.36,-5.84 3.3367,1.1001 2.7256,3.5703 1.41,6.16" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-controller" viewBox="9669.4 15308.8 143.4 100.6">
+          <g>
+            <path d="M 9727.8743,15369.854 C 9739.2,15368.956 9750.6155,15369.231 9761.931,15370.032 c 4.4811,3.0728 6.4225,8.6357 8.9942,13.2811 2.8672,4.9945 5.1881,10.9137 10.2514,14.0673 5.2671,2.1012 12.6648,2.0017 16.4586,-2.8043 4.2079,-4.4697 5.3506,-13.1276 2.4818,-20.2552 -2.3856,-7.1168 -4.0865,-14.419 -5.6938,-21.732 -2.6219,-7.8768 -7.1635,-14.9423 -9.9591,-22.7518 -3.2155,-6.879 -11.8602,-7.1245 -18.4062,-6.7116 -13.0452,0.5632 -26.0998,-0.1764 -39.1157,-0.8211 -9.9232,0.1992 -21.5867,-1.4195 -29.5116,5.9728 -5.7593,5.4111 -7.7451,13.3797 -10.3585,20.5451 -1.545,7.1628 -2.9266,14.3818 -4.5981,21.4992 -0.8703,6.8542 -3.6662,13.9003 -1.7416,20.7912 3.0366,6.3093 12.5512,6.3586 17.6764,2.782 5.5518,-3.8575 10.57,-8.4728 13.3154,-14.7754 1.1458,-6.3162 7.8083,-6.9505 12.9576,-7.4603 3.3283,0.3601 4.1779,0.2526 5.0324,0.208" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="M 9714.082,15336.17 C 9713.3921,15342.987 9713.0768,15349.853 9713.442,15356.7" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="M 9704.1358,15345.373 C 9709.9838,15346.965 9716.1025,15346.615 9722.0958,15346.813" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9754.9659,15344.031 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9768.5937,15331.84 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9778.5342,15343.069 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+            <path d="m 9769.2351,15355.741 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-questionmark" viewBox="9726.3 15693.5 73.9 126.5">
+          <g>
+            <path d="m 9738.3308,15725.631 c 8.4828,-7.116 16.4951,-15.0936 26.4712,-20.1369 5.276,-2.4326 12.6163,-3.9001 17.1188,0.8288 4.6297,4.5826 5.5701,11.4581 6.31,17.6281 0.5498,6.1981 0.1263,12.4995 -1.38,18.5344 -1.415,5.2888 -4.6789,10.2572 -9.7644,12.6293 -0.7484,1.6694 -5.1342,0.8194 -8.7064,2.5563 -3.1257,3.0538 -3.7789,7.7555 -4.6606,11.8725 -0.8162,4.9156 -0.9343,9.875 -0.9694,14.8475" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+            <path d="m 9763.1908,15808.042 m -0.5,0 a 0.5,0.5 0 1 0 1,0 0.5,0.5 0 1 0 -1,0" stroke-linecap="round" fill="currentColor" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+        <symbol id="icon-star" viewBox="9681.8 15493.1 132.4 131.0">
+          <g>
+            <path d="m 9727.7786,15536.692 c 6.242,-8.8646 9.0959,-19.4829 14.87,-28.6 1.4501,-5.0736 7.2186,-10.6846 9.8,-2.99 2.9008,6.6927 3.6619,14.0758 6.92,20.65 3.5071,4.9754 3.0971,14.6946 9.98,15.98 9.4005,0.458 18.836,-0.2428 28.21,0.76 3.8057,-0.8214 8.6659,0.8986 4.64,5.23 -6.474,8.1894 -17.0024,12.4808 -22.2,21.85 -4.7074,5.2901 -0.2798,12.5896 0.09,18.65 0.978,7.2849 3.5585,14.3488 3.93,21.68 -5.0652,-0.4365 -9.9553,-7.3258 -15.48,-9.17 -7.661,-3.1464 -12.7855,-9.9255 -19.61,-14.3 -6.0212,0.3078 -10.2631,5.8295 -14.72,9.36 -6.7298,5.6157 -13.0675,11.4301 -20.39,16.275 -4.8458,-2.8374 -0.7221,-11.3481 0.75,-15.8825 1.9031,-6.2022 5.5932,-11.5325 8.385,-17.3225 0.879,-6.0175 -6.7772,-8.2441 -9.535,-12.69 -4.8161,-6.8295 -11.7476,-11.547 -18.41,-16.37 -3.1159,-1.9775 -9.0266,-7.7371 -1.25,-6.61 9.8559,-0.2429 19.7659,0.2429 29.59,-0.25 1.3537,-0.3713 3.3461,-4.2696 4.43,-6.25" stroke-linecap="round" fill="none" stroke="currentColor" stroke-width="10" />
+          </g>
+        </symbol>
+      </defs>
+    </svg>
 
-    <!-- Main Menu -->
-    <div id="main-menu" class="menu">
-        <div class="menu-item selected" data-href="app-gameloader.html">Enter gamecode</div>
-        <div class="menu-item" data-action="tests">Tests</div>
-        <div class="menu-item" data-href="app-wifi.html">Wi-Fi Settings</div>
-        <div class="menu-item" data-action="update" id="update-btn">Check for updates</div>
-        <div id="update-status" style="font-size: 0.8em; color: #888; text-align: center; margin-top: -10px; margin-bottom: 10px;"></div>
+    <div id="screen">
+      <div id="doodles-layer" class="doodles-background"></div>
+      <div class="title-container">
+        <svg class="curved-title" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <path id="curve-line1" d="M 20 105 Q 350 20 680 105"></path>
+            <path id="curve-line2" d="M 20 235 Q 350 150 680 235"></path>
+            <g id="title-lines">
+              <text class="title-text">
+                <textPath href="#curve-line1" text-anchor="middle" startOffset="50%">
+                  WEB GAME
+                </textPath>
+              </text>
+              <text class="title-text">
+                <textPath href="#curve-line2" text-anchor="middle" startOffset="50%">
+                  CONSOLE
+                </textPath>
+              </text>
+            </g>
+          </defs>
+          <use href="#title-lines" transform="translate(0, 20) translate(350, 170) scale(0.94) translate(-350, -170)" class="extrude" />
+          <use href="#title-lines" transform="translate(0, 15) translate(350, 170) scale(0.955) translate(-350, -170)" class="extrude" />
+          <use href="#title-lines" transform="translate(0, 10) translate(350, 170) scale(0.97) translate(-350, -170)" class="extrude" />
+          <use href="#title-lines" transform="translate(0, 5) translate(350, 170) scale(0.985) translate(-350, -170)" class="extrude" />
+          <use href="#title-lines" class="front" />
+        </svg>
+      </div>
+      <div id="main-menu" class="menu-container">
+        <div class="menu-item selected" data-href="browse.html">browse games</div>
+        <div class="menu-item" data-href="app-gameloader.html">enter gamecode</div>
+        <div class="menu-item" data-href="app-wifi.html">wifi settings</div>
+        <div class="menu-item" data-action="update" id="update-btn">check for updates</div>
+      </div>
+      <div id="update-status"></div>
     </div>
-
-    <!-- Tests Submenu -->
-    <div id="tests-menu" class="menu hidden">
-        <div class="menu-item selected" data-href="basic-gamepad.html">Gamepad Test</div>
-        <div class="menu-item" data-href="basic-webaudio.html">Web Audio Test</div>
-        <div class="menu-item" data-href="basic-webgl.html">WebGL Test</div>
-        <div class="menu-item" data-href="basic-platformer.html">Platformer Test</div>
-        <div class="menu-item" data-href="basic-storage.html">Storage Test</div>
-        <div class="menu-item" data-href="basic-nostr.html">Nostr Test</div>
-    </div>
-
-    <div id="instructions" style="margin-top: 50px; color: #888; font-size: 1.2em;">Use D-Pad / Left Stick to navigate.<br>Press A/X to select.<br>Press Y to go Home.</div>
 
     <script>
         let systemApi = null;
@@ -45,13 +329,13 @@
                     const status = document.getElementById('update-status');
                     if (response.code === 0 && response.update_available) {
                         updateState = 'install';
-                        btn.innerText = "Install update";
+                        btn.innerText = "install update";
                         status.innerText = "";
                     } else {
                         updateState = 'check';
-                        btn.innerText = "Check for updates";
+                        btn.innerText = "check for updates";
                         if (showUpToDate) {
-                            status.innerText = "Up to date";
+                            status.innerText = "up to date";
                         }
                     }
                 } catch (e) {}
@@ -84,129 +368,201 @@
 
         document.body.focus();
 
-        let currentScreen = 'main'; // main, tests
-        const mainItems = document.querySelectorAll('#main-menu .menu-item');
-        const testsItems = document.querySelectorAll('#tests-menu .menu-item');
-        let mainSelectedIndex = 0;
-        let testsSelectedIndex = 0;
+        const menuItems = Array.from(document.querySelectorAll('.menu-item'));
+        let selectedMenuIdx = 0;
 
-        function getActiveItems() {
-            return currentScreen === 'main' ? mainItems : testsItems;
-        }
+        function updateSelection(newIdx) {
+            if (newIdx < 0) newIdx = menuItems.length - 1;
+            if (newIdx >= menuItems.length) newIdx = 0;
+            selectedMenuIdx = newIdx;
 
-        function getActiveSelectedIndex() {
-            return currentScreen === 'main' ? mainSelectedIndex : testsSelectedIndex;
-        }
-
-        function setActiveSelectedIndex(idx) {
-            if (currentScreen === 'main') mainSelectedIndex = idx;
-            else testsSelectedIndex = idx;
-        }
-
-        function updateSelection() {
-            const items = getActiveItems();
-            const idx = getActiveSelectedIndex();
-            items.forEach((item, i) => {
-                if (i === idx) item.classList.add('selected');
-                else item.classList.remove('selected');
+            menuItems.forEach((item, idx) => {
+                if (idx === selectedMenuIdx) {
+                    item.classList.remove('selected');
+                    void item.offsetWidth;
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
             });
         }
 
-        function switchToScreen(screen) {
-            currentScreen = screen;
-            document.getElementById('main-menu').classList.toggle('hidden', screen !== 'main');
-            document.getElementById('tests-menu').classList.toggle('hidden', screen !== 'tests');
-            updateSelection();
-        }
-
         function executeAction() {
-            const items = getActiveItems();
-            const idx = getActiveSelectedIndex();
-            const item = items[idx];
+            const item = menuItems[selectedMenuIdx];
+            if (!item) return;
 
-            if (currentScreen === 'main') {
-                const action = item.getAttribute('data-action');
-                const href = item.getAttribute('data-href');
-                if (action === 'tests') {
-                    switchToScreen('tests');
-                } else if (action === 'update') {
-                    if (systemApi) {
-                        const status = document.getElementById('update-status');
-                        if (updateState === 'check') {
-                            item.innerText = "Checking...";
-                            status.innerText = "";
-                            systemApi.fetch_update(function(resStr) {
-                                try {
-                                    const res = JSON.parse(resStr);
-                                    if (res.code === 0) {
-                                        checkLocalUpdates(true);
-                                    } else {
-                                        item.innerText = "Check for updates";
-                                        status.innerText = "Network error";
-                                    }
-                                } catch (e) {
-                                    item.innerText = "Check for updates";
-                                    status.innerText = "Error checking";
+            const action = item.getAttribute('data-action');
+            const href = item.getAttribute('data-href');
+
+            if (action === 'update') {
+                if (systemApi) {
+                    const status = document.getElementById('update-status');
+                    if (updateState === 'check') {
+                        item.innerText = "checking...";
+                        status.innerText = "";
+                        systemApi.fetch_update(function(resStr) {
+                            try {
+                                const res = JSON.parse(resStr);
+                                if (res.code === 0) {
+                                    checkLocalUpdates(true);
+                                } else {
+                                    item.innerText = "check for updates";
+                                    status.innerText = "network error";
                                 }
-                            });
-                        } else if (updateState === 'install') {
-                            item.innerText = "Installing & restarting...";
-                            status.innerText = "";
-                            systemApi.update_system(function(responseStr) {
-                                try {
-                                    const response = JSON.parse(responseStr);
-                                    if (response.code !== 0) {
-                                        item.innerText = "Install update";
-                                        status.innerText = "Update failed";
-                                    }
-                                } catch (e) {
-                                    item.innerText = "Install update";
-                                    status.innerText = "Update failed";
+                            } catch (e) {
+                                item.innerText = "check for updates";
+                                status.innerText = "error checking";
+                            }
+                        });
+                    } else if (updateState === 'install') {
+                        item.innerText = "installing & restarting...";
+                        status.innerText = "";
+                        systemApi.update_system(function(responseStr) {
+                            try {
+                                const response = JSON.parse(responseStr);
+                                if (response.code !== 0) {
+                                    item.innerText = "install update";
+                                    status.innerText = "update failed";
                                 }
-                            });
-                        }
+                            } catch (e) {
+                                item.innerText = "install update";
+                                status.innerText = "update failed";
+                            }
+                        });
                     }
-                } else if (href) {
-                    window.location.href = href;
                 }
-            } else if (currentScreen === 'tests') {
-                const href = item.getAttribute('data-href');
-                if (href) {
-                    window.location.href = href;
-                }
+            } else if (href) {
+                window.location.href = href;
             }
         }
 
-        function handleBack() {
-            if (currentScreen !== 'main') {
-                switchToScreen('main');
+        menuItems.forEach((item, idx) => {
+            item.addEventListener('click', () => {
+                updateSelection(idx);
+                executeAction();
+            });
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                updateSelection(selectedMenuIdx - 1);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                updateSelection(selectedMenuIdx + 1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                executeAction();
             }
-        }
+        });
 
         const gamepad = new GamepadInput({
             onUp: () => {
-                const items = getActiveItems();
-                const idx = getActiveSelectedIndex();
-                setActiveSelectedIndex((idx - 1 + items.length) % items.length);
-                updateSelection();
+                updateSelection(selectedMenuIdx - 1);
             },
             onDown: () => {
-                const items = getActiveItems();
-                const idx = getActiveSelectedIndex();
-                setActiveSelectedIndex((idx + 1) % items.length);
-                updateSelection();
+                updateSelection(selectedMenuIdx + 1);
             },
             onAction: () => {
                 executeAction();
-            },
-            onBack: () => {
-                handleBack();
-            },
-            onHome: () => {
-                handleBack();
             }
         });
         gamepad.start();
+
+        function initDoodleBackground() {
+            const layer = document.getElementById('doodles-layer');
+            if (!layer) return;
+
+            const icons = [
+                'icon-tamagotchi',
+                'icon-gameboy',
+                'icon-pacman',
+                'icon-ghost',
+                'icon-joystick',
+                'icon-mushroom',
+                'icon-controller',
+                'icon-questionmark',
+                'icon-star'
+            ];
+
+            let seed = 42;
+            function rnd() {
+                seed = (seed * 9301 + 49297) % 233280;
+                return seed / 233280;
+            }
+
+            const quadrantWidth = 720;
+            const quadrantHeight = 720;
+            const iconSize = 56;
+            const minDist = 112;
+
+            function toroidalDistSq(x1, y1, x2, y2) {
+                let dx = Math.abs(x1 - x2);
+                let dy = Math.abs(y1 - y2);
+                if (dx > quadrantWidth / 2) dx = quadrantWidth - dx;
+                if (dy > quadrantHeight / 2) dy = quadrantHeight - dy;
+                return dx * dx + dy * dy;
+            }
+
+            const items = [];
+            let iconIdx = 0;
+            const maxAttempts = 1500;
+            const minDistSq = minDist * minDist;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const candX = rnd() * quadrantWidth;
+                const candY = rnd() * quadrantHeight;
+
+                let ok = true;
+                for (let j = 0; j < items.length; j++) {
+                    if (toroidalDistSq(candX, candY, items[j].cx, items[j].cy) < minDistSq) {
+                        ok = false;
+                        break;
+                    }
+                }
+
+                if (ok) {
+                    const icon = icons[iconIdx % icons.length];
+                    iconIdx++;
+                    const rot = Math.round((rnd() - 0.5) * 16);
+                    const opacity = (0.55 + rnd() * 0.35).toFixed(2);
+                    items.push({
+                        icon: icon,
+                        size: iconSize,
+                        cx: candX,
+                        cy: candY,
+                        x: candX - iconSize / 2,
+                        y: candY - iconSize / 2,
+                        rot: rot,
+                        opacity: opacity
+                    });
+                }
+            }
+
+            let html = '';
+            const offsets = [
+                { dx: 0, dy: 0 },
+                { dx: quadrantWidth, dy: 0 },
+                { dx: 0, dy: quadrantHeight },
+                { dx: quadrantWidth, dy: quadrantHeight }
+            ];
+
+            offsets.forEach(off => {
+                items.forEach(it => {
+                    const posX = Math.round(it.x + off.dx);
+                    const posY = Math.round(it.y + off.dy);
+                    html += `
+                      <svg class="doodle-item" style="left: ${posX}px; top: ${posY}px; width: ${it.size}px; height: ${it.size}px; transform: rotate(${it.rot}deg); opacity: ${it.opacity};">
+                        <use href="#${it.icon}"></use>
+                      </svg>
+                    `;
+                });
+            });
+
+            layer.innerHTML = html;
+        }
+
+        initDoodleBackground();
     </script>
 </body>
 </html>

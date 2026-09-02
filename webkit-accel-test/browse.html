@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Games</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+      @font-face {
+        font-family: 'Comic Mono';
+        src: url('ComicMono.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+      }
+      body {
+        font-family: 'Comic Mono', monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background: #3D3846;
+        color: #fff;
+      }
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        color: #E5A50A;
+      }
+      p {
+        font-size: 1.3em;
+        color: #ccc;
+      }
+      .hint {
+        margin-top: 40px;
+        color: #888;
+        font-size: 1.1em;
+      }
+    </style>
+    <script src="gamepad.js"></script>
+</head>
+<body tabindex="0">
+    <h1>Browse Games</h1>
+    <p>Coming soon...</p>
+    <div class="hint">Press B or Y to return Home</div>
+
+    <script>
+      document.body.focus();
+      const gamepad = new GamepadInput({
+        onBack: () => {
+          window.location.href = 'index.html';
+        },
+        onHome: () => {
+          window.location.href = 'index.html';
+        }
+      });
+      gamepad.start();
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' || e.key === 'Backspace') {
+          window.location.href = 'index.html';
+        }
+      });
+    </script>
+</body>
+</html>
