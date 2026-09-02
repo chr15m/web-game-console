@@ -6,7 +6,7 @@
     <title>Web Game Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chango&family=Darumadrop+One&family=Londrina+Solid:wght@400;900&family=Modak&family=Sigmar+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Bungee&family=Chango&family=Chewy&family=Darumadrop+One&family=Lilita+One&family=Londrina+Solid:wght@400;900&family=Luckiest+Guy&family=Modak&family=Paytone+One&family=Sigmar+One&family=Titan+One&display=swap" rel="stylesheet">
     <style>
       * {
         box-sizing: border-box;
@@ -117,10 +117,22 @@
           <option value="'Modak', cursive, sans-serif">Modak</option>
           <option value="'Londrina Solid', sans-serif">Londrina Solid</option>
           <option value="'Sigmar One', cursive, sans-serif">Sigmar One</option>
+          <option value="'Titan One', cursive, sans-serif">Titan One</option>
+          <option value="'Paytone One', sans-serif">Paytone One</option>
+          <option value="'Lilita One', cursive, sans-serif">Lilita One</option>
+          <option value="'Bagel Fat One', cursive, sans-serif">Bagel Fat One</option>
+          <option value="'Chewy', cursive, sans-serif">Chewy</option>
+          <option value="'Luckiest Guy', cursive, sans-serif">Luckiest Guy</option>
+          <option value="'Bungee', cursive, sans-serif">Bungee</option>
         </select>
       </label>
       <label>
         <input type="checkbox" id="caps-check"> All Caps
+      </label>
+      <label>
+        Spacing:
+        <input type="range" id="spacing-slider" min="0" max="30" value="3" step="1">
+        <span id="spacing-val">3px</span>
       </label>
     </div>
     <div id="screen">
@@ -153,6 +165,8 @@
     <script>
       const fontSelect = document.getElementById('font-select');
       const capsCheck = document.getElementById('caps-check');
+      const spacingSlider = document.getElementById('spacing-slider');
+      const spacingVal = document.getElementById('spacing-val');
       const textPath1 = document.querySelector('#title-lines text:first-of-type textPath');
       const textPath2 = document.querySelector('#title-lines text:last-of-type textPath');
       const textElem1 = document.querySelector('#title-lines text:first-of-type');
@@ -182,9 +196,13 @@
       function update() {
         const font = fontSelect.value;
         const caps = capsCheck.checked;
+        const spacing = spacingSlider.value + 'px';
 
+        spacingVal.textContent = spacing;
         textElem1.style.fontFamily = font;
         textElem2.style.fontFamily = font;
+        textElem1.style.letterSpacing = spacing;
+        textElem2.style.letterSpacing = spacing;
         textPath1.textContent = caps ? originalLine1.toUpperCase() : originalLine1;
         textPath2.textContent = caps ? originalLine2.toUpperCase() : originalLine2;
 
@@ -193,6 +211,7 @@
 
       fontSelect.addEventListener('change', update);
       capsCheck.addEventListener('change', update);
+      spacingSlider.addEventListener('input', update);
 
       document.fonts.ready.then(fitText);
     </script>
