@@ -110,6 +110,21 @@
   <body>
     <div id="controls">
       <label>
+        Preset:
+        <select id="preset-select">
+          <option value="0">Darumadrop One (Caps)</option>
+          <option value="1">Darumadrop One (Title Case)</option>
+          <option value="2">Luckiest Guy (Caps)</option>
+          <option value="3">Luckiest Guy (Title Case)</option>
+          <option value="4">Bungee</option>
+          <option value="5">Lilita One (Caps)</option>
+          <option value="6">Lilita One (Title Case)</option>
+          <option value="7">Londrina Solid</option>
+          <option value="8">Chango (Caps)</option>
+          <option value="9">Paytone One</option>
+        </select>
+      </label>
+      <label>
         Font:
         <select id="font-select">
           <option value="'Darumadrop One', cursive, sans-serif">Darumadrop One</option>
@@ -165,6 +180,7 @@
       </div>
     </div>
     <script>
+      const presetSelect = document.getElementById('preset-select');
       const fontSelect = document.getElementById('font-select');
       const capsCheck = document.getElementById('caps-check');
       const spacingSlider = document.getElementById('spacing-slider');
@@ -175,6 +191,19 @@
       const textPath2 = document.querySelector('#title-lines text:last-of-type textPath');
       const textElem1 = document.querySelector('#title-lines text:first-of-type');
       const textElem2 = document.querySelector('#title-lines text:last-of-type');
+
+      const presets = [
+        { name: "Darumadrop One", font: "'Darumadrop One', cursive, sans-serif", caps: true, spacing: 4, size1: 106, size2: 116 },
+        { name: "Darumadrop One", font: "'Darumadrop One', cursive, sans-serif", caps: false, spacing: 2, size1: 112, size2: 116 },
+        { name: "Luckiest Guy", font: "'Luckiest Guy', cursive, sans-serif", caps: true, spacing: 10, size1: 98, size2: 116 },
+        { name: "Luckiest Guy", font: "'Luckiest Guy', cursive, sans-serif", caps: false, spacing: 11, size1: 90, size2: 116 },
+        { name: "Bungee", font: "'Bungee', cursive, sans-serif", caps: false, spacing: 1, size1: 98, size2: 108 },
+        { name: "Lilita One", font: "'Lilita One', cursive, sans-serif", caps: true, spacing: 5, size1: 100, size2: 116 },
+        { name: "Lilita One", font: "'Lilita One', cursive, sans-serif", caps: false, spacing: 5, size1: 110, size2: 116 },
+        { name: "Londrina Solid", font: "'Londrina Solid', sans-serif", caps: false, spacing: 7, size1: 116, size2: 116 },
+        { name: "Chango", font: "'Chango', cursive, sans-serif", caps: true, spacing: 5, size1: 66, size2: 78 },
+        { name: "Paytone One", font: "'Paytone One', sans-serif", caps: false, spacing: 6, size1: 92, size2: 116 }
+      ];
 
       const originalLine1 = "Web Game";
       const originalLine2 = "Console";
@@ -228,6 +257,31 @@
         document.fonts.ready.then(fitText);
       }
 
+      function applyPreset(idx) {
+        const p = presets[idx];
+        if (!p) return;
+        fontSelect.value = p.font;
+        capsCheck.checked = p.caps;
+        spacingSlider.value = p.spacing;
+        spacingVal.textContent = p.spacing + 'px';
+
+        textElem1.style.fontFamily = p.font;
+        textElem2.style.fontFamily = p.font;
+        textElem1.style.letterSpacing = p.spacing + 'px';
+        textElem2.style.letterSpacing = p.spacing + 'px';
+        textElem1.style.fontSize = p.size1 + 'px';
+        textElem2.style.fontSize = p.size2 + 'px';
+
+        textPath1.textContent = p.caps ? originalLine1.toUpperCase() : originalLine1;
+        textPath2.textContent = p.caps ? originalLine2.toUpperCase() : originalLine2;
+
+        document.fonts.ready.then(updateSettingsText);
+      }
+
+      presetSelect.addEventListener('change', (e) => {
+        applyPreset(parseInt(e.target.value, 10));
+      });
+
       fontSelect.addEventListener('change', update);
       capsCheck.addEventListener('change', update);
       spacingSlider.addEventListener('input', update);
@@ -240,7 +294,7 @@
         });
       });
 
-      document.fonts.ready.then(fitText);
+      document.fonts.ready.then(() => applyPreset(0));
     </script>
   </body>
 </html>
