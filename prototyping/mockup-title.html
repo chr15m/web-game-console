@@ -85,6 +85,16 @@
         margin-top: 30px;
         position: relative;
         z-index: 2;
+        animation: title-bob 3s ease-in-out infinite;
+      }
+
+      @keyframes title-bob {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
       }
 
       .curved-title {
@@ -156,18 +166,15 @@
         -webkit-text-stroke: 11px #212123;
         padding: 9px 0;
         filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.25));
-        animation: menu-pop-bounce 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation: menu-pulse 0.5s ease-in-out infinite;
       }
 
-      @keyframes menu-pop-bounce {
-        0% {
-          transform: scale(0.9);
-        }
-        55% {
-          transform: scale(1.06);
-        }
-        100% {
+      @keyframes menu-pulse {
+        0%, 100% {
           transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
         }
       }
 
