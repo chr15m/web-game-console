@@ -134,6 +134,8 @@
         <input type="range" id="spacing-slider" min="0" max="30" value="3" step="1">
         <span id="spacing-val">3px</span>
       </label>
+      <textarea id="settings-output" readonly rows="5" style="width: 100%; font-family: monospace; font-size: 11px; background: #1a1b1e; color: #a5d6a7; border: 1px solid #444; border-radius: 4px; padding: 6px; resize: none;"></textarea>
+      <button id="copy-settings-btn" type="button" style="padding: 4px 8px; font-size: 12px; background: #3b82f6; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Copy Settings</button>
     </div>
     <div id="screen">
       <div class="title-container">
@@ -167,6 +169,8 @@
       const capsCheck = document.getElementById('caps-check');
       const spacingSlider = document.getElementById('spacing-slider');
       const spacingVal = document.getElementById('spacing-val');
+      const settingsOutput = document.getElementById('settings-output');
+      const copyBtn = document.getElementById('copy-settings-btn');
       const textPath1 = document.querySelector('#title-lines text:first-of-type textPath');
       const textPath2 = document.querySelector('#title-lines text:last-of-type textPath');
       const textElem1 = document.querySelector('#title-lines text:first-of-type');
@@ -176,6 +180,20 @@
       const originalLine2 = "Console";
       const baseFontSize = 116;
       const maxTextLength = 540;
+
+      function updateSettingsText() {
+        const selectedOption = fontSelect.options[fontSelect.selectedIndex];
+        const fontName = selectedOption ? selectedOption.text : fontSelect.value;
+        const out = [
+          `Font: ${fontName}`,
+          `Font Family: ${fontSelect.value}`,
+          `All Caps: ${capsCheck.checked}`,
+          `Letter Spacing: ${spacingSlider.value}px`,
+          `Font Size Line 1: ${textElem1.style.fontSize}`,
+          `Font Size Line 2: ${textElem2.style.fontSize}`
+        ].join('\n');
+        settingsOutput.value = out;
+      }
 
       function fitText() {
         const adjust = (elem, path) => {
@@ -191,6 +209,7 @@
 
         adjust(textElem1, textPath1);
         adjust(textElem2, textPath2);
+        updateSettingsText();
       }
 
       function update() {
@@ -212,6 +231,14 @@
       fontSelect.addEventListener('change', update);
       capsCheck.addEventListener('change', update);
       spacingSlider.addEventListener('input', update);
+
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(settingsOutput.value).then(() => {
+          const prev = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => copyBtn.textContent = prev, 1500);
+        });
+      });
 
       document.fonts.ready.then(fitText);
     </script>
