@@ -6,7 +6,7 @@
     <title>Web Game Console</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Darumadrop+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chango&family=Darumadrop+One&family=Londrina+Solid:wght@400;900&family=Modak&family=Sigmar+One&display=swap" rel="stylesheet">
     <style>
       * {
         box-sizing: border-box;
@@ -71,9 +71,58 @@
         fill: #F02828;
         stroke: #212123;
       }
+
+      #controls {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 1000;
+        background: rgba(20, 20, 25, 0.9);
+        color: #eee;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-family: sans-serif;
+        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+
+      #controls label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      #controls select {
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #2a2c33;
+        color: #fff;
+        border: 1px solid #555;
+        font-size: 13px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
+    <div id="controls">
+      <label>
+        Font:
+        <select id="font-select">
+          <option value="'Darumadrop One', cursive, sans-serif">Darumadrop One</option>
+          <option value="'Chango', cursive, sans-serif">Chango</option>
+          <option value="'Modak', cursive, sans-serif">Modak</option>
+          <option value="'Londrina Solid', sans-serif">Londrina Solid</option>
+          <option value="'Sigmar One', cursive, sans-serif">Sigmar One</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="caps-check"> All Caps
+      </label>
+    </div>
     <div id="screen">
       <div class="title-container">
         <svg class="curved-title" viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
@@ -101,5 +150,25 @@
         </svg>
       </div>
     </div>
+    <script>
+      const fontSelect = document.getElementById('font-select');
+      const capsCheck = document.getElementById('caps-check');
+      const textLine1 = document.querySelector('#curve-line1 + text, #title-lines text:first-of-type textPath');
+      const textLine2 = document.querySelector('#title-lines text:last-of-type textPath');
+      const titleTexts = document.querySelectorAll('.title-text');
+
+      const originalLine1 = "Web Game";
+      const originalLine2 = "Console";
+
+      fontSelect.addEventListener('change', (e) => {
+        titleTexts.forEach(el => el.style.fontFamily = e.target.value);
+      });
+
+      capsCheck.addEventListener('change', (e) => {
+        const caps = e.target.checked;
+        textLine1.textContent = caps ? originalLine1.toUpperCase() : originalLine1;
+        textLine2.textContent = caps ? originalLine2.toUpperCase() : originalLine2;
+      });
+    </script>
   </body>
 </html>
