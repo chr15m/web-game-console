@@ -1,5 +1,3 @@
-- [x] Audio is laggy - reduce buffer size (tested 256 vs 512 samples)
-
 - [ ] Work through high-priority items in `performance-tuning.md`:
   - [ ] Set CPU & GPU governors to 'performance' on boot
   - [ ] Add Nice=-10 and LimitRTPRIO=99 to web-console.service
@@ -39,19 +37,9 @@
 - [ ] Test HTML5 `<video>` software decoding performance and document caveats.
 - [ ] Test WebAssembly (Wasm) support and document limitations (Chromium 69).
 
-# Paused
-
-- [-] Doom test?
-
-- [-] Get https://rogule.com/game.html showing up and playable
-
-*(Note: X11/surf tasks below are paused/archived while we pursue direct EGL/KMS rendering)*
-- [-] Basic gamepad web app test in surf
-- [-] Test basic EGL/KMS triangle rendering in C without SDL2 to isolate the display pipeline
-- [x] Figure out how to get 3d acceleration working
-- [-] Get it booting into surf instead of emustation
-
 # Done
+
+- [x] Audio is laggy - reduce buffer size (tested 256 vs 512 samples)
 
 - [x] Git pull to update
 
@@ -83,3 +71,16 @@
 
 - [x] Get SSH authorized_keys working
 - [x] Automate extraction of `R36S-Xorg/XFCE/files/driver` or use a git submodule
+
+# Paused
+
+- [-] Doom test?
+
+- [-] Get https://rogule.com/game.html showing up and playable
+
+*(Note: X11/surf tasks below are paused/archived while we pursue direct EGL/KMS rendering)*
+- [-] Basic gamepad web app test in surf
+- [-] Test basic EGL/KMS triangle rendering in C without SDL2 to isolate the display pipeline
+- [x] Figure out how to get 3d acceleration working
+- [-] Get it booting into surf instead of emustation
+
