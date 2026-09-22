@@ -460,19 +460,6 @@
             });
         });
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                updateSelection(selectedMenuIdx - 1);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                updateSelection(selectedMenuIdx + 1);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                executeAction();
-            }
-        });
-
         const gamepad = new GamepadInput({
             onUp: () => {
                 updateSelection(selectedMenuIdx - 1);
