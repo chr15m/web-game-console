@@ -110,23 +110,30 @@ ssh $SSH_OPTS ark@$HOST "sudo systemctl disable gdm3 gdm display-manager || true
 ssh $SSH_OPTS ark@$HOST "sudo rm -f /etc/systemd/system/display-manager.service"
 ssh $SSH_OPTS ark@$HOST "sudo systemctl mask gdm3 gdm display-manager || true"
 
-if [ -f "$SCRIPT_DIR/assets/splash.svg" ]; then
-    echo "Converting splash.svg to logo.png..."
-    if command -v rsvg-convert >/dev/null 2>&1; then
-        rsvg-convert -w 720 -h 720 -b black "$SCRIPT_DIR/assets/splash.svg" -o /tmp/logo.png
-    elif command -v convert >/dev/null 2>&1; then
-        convert -background black -resize 720x720\! "$SCRIPT_DIR/assets/splash.svg" /tmp/logo.png
-    else
-        echo "Warning: rsvg-convert or convert not found. Skipping splash screen update."
-    fi
+# if [ -f "$SCRIPT_DIR/assets/splash.svg" ]; then
+#     echo "Converting splash.svg to logo.png..."
+#     if command -v rsvg-convert >/dev/null 2>&1; then
+#         rsvg-convert -w 720 -h 720 -b black "$SCRIPT_DIR/assets/splash.svg" -o /tmp/logo.png
+#     elif command -v convert >/dev/null 2>&1; then
+#         convert -background black -resize 720x720\! "$SCRIPT_DIR/assets/splash.svg" /tmp/logo.png
+#     else
+#         echo "Warning: rsvg-convert or convert not found. Skipping splash screen update."
+#     fi
+#
+#     if [ -f /tmp/logo.png ]; then
+#         echo "Backing up and uploading new boot logo..."
+#         ssh $SSH_OPTS ark@$HOST "sudo cp /boot/logo.png /boot/logo.png.bak 2>/dev/null || true"
+#         rsync -e "ssh $SSH_OPTS" --checksum /tmp/logo.png ark@$HOST:/tmp/logo.png
+#         ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/logo.png /boot/logo.png && sudo rm /tmp/logo.png"
+#         rm -f /tmp/logo.png
+#     fi
+# fi
 
-    if [ -f /tmp/logo.png ]; then
-        echo "Backing up and uploading new boot logo..."
-        ssh $SSH_OPTS ark@$HOST "sudo cp /boot/logo.png /boot/logo.png.bak 2>/dev/null || true"
-        rsync -e "ssh $SSH_OPTS" --checksum /tmp/logo.png ark@$HOST:/tmp/logo.png
-        ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/logo.png /boot/logo.png && sudo rm /tmp/logo.png"
-        rm -f /tmp/logo.png
-    fi
+if [ -f "$SCRIPT_DIR/assets/title.png" ]; then
+    echo "Backing up and uploading title.png as boot logo..."
+    ssh $SSH_OPTS ark@$HOST "sudo cp /boot/logo.png /boot/logo.png.bak 2>/dev/null || true"
+    rsync -e "ssh $SSH_OPTS" --checksum "$SCRIPT_DIR/assets/title.png" ark@$HOST:/tmp/logo.png
+    ssh $SSH_OPTS ark@$HOST "sudo cp /tmp/logo.png /boot/logo.png && sudo rm /tmp/logo.png"
 fi
 
 echo "Done."
