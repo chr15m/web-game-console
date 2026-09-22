@@ -1,16 +1,30 @@
+- [x] Audio is laggy - reduce buffer size (tested 256 vs 512 samples)
+
+- [ ] Work through high-priority items in `performance-tuning.md`:
+  - [ ] Set CPU & GPU governors to 'performance' on boot
+  - [ ] Add Nice=-10 and LimitRTPRIO=99 to web-console.service
+  - [ ] Test disabling PulseAudio service and validating direct ALSA playback
+
 - [ ] Basic "browse games" page pulling from a nostr pubkey feed with tag #mainfeed
-- [ ] Isolate games on their own .localhost domain
-- [ ] Implement robust top level "exit game" buttons event handler (start + select)
 
 - [ ] Improve the game code entering interface and fix design to match front page
+
 - [ ] WiFi page fixes
   - [ ] Make the design match the new homepage
   - [ ] Open wifi access points should be clearer
   - [ ] WiFi page hangs under different circumstances (e.g. connect)
   - [ ] Can't exit WiFi page
-- [ ] Audio is laggy - some way to reduce buffer size?
 
-- [ ] Initial placeholder page on webgameconsole.com with the uploader
+- [ ] Implement robust top level "exit game" buttons event handler (start + select)
+
+- [ ] Initial placeholder page on webgameconsole.com with:
+  - [ ] Basic copy
+  - [ ] Uploader page
+  - [ ] Game simulator
+
+- [ ] "check for updates" freezes the screen - needs to be async with a callback
+
+- [ ] Isolate games on their own .localhost domain
 
 # Post-SLC
 
