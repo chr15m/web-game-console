@@ -1,14 +1,23 @@
-- [ ] Git pull to update
+- [ ] Basic "browse games" page pulling from a nostr pubkey feed with tag #mainfeed
+- [ ] Isolate games on their own .localhost domain
+- [ ] Implement robust top level "exit game" buttons event handler (start + select)
+
+- [ ] Improve the game code entering interface and fix design to match front page
 - [ ] WiFi page fixes
+  - [ ] Make the design match the new homepage
   - [ ] Open wifi access points should be clearer
   - [ ] WiFi page hangs under different circumstances (e.g. connect)
   - [ ] Can't exit WiFi page
-- [ ] Save games locally after downloading and list downloaded games
-- [ ] Can we improve the UI so the grid is still showing while entering?
 - [ ] Audio is laggy - some way to reduce buffer size?
+
+- [ ] Initial placeholder page on webgameconsole.com with the uploader
+
+# Post-SLC
+
+- [ ] Cache games locally after downloading and list downloaded games
+- [ ] Can we improve the UI so the grid is still showing while entering?
 - [ ] An LLM document to explain how to build games, with examples
 - [ ] Support games with more than 1 file (?.localhost:8000 serving)
-- [ ] Doom test?
 
 **QtWebEngine / EGLFS Tasks:**
 
@@ -17,6 +26,8 @@
 - [ ] Test WebAssembly (Wasm) support and document limitations (Chromium 69).
 
 # Paused
+
+- [-] Doom test?
 
 - [-] Get https://rogule.com/game.html showing up and playable
 
@@ -27,6 +38,8 @@
 - [-] Get it booting into surf instead of emustation
 
 # Done
+
+- [x] Git pull to update
 
 - [x] Provide a way to configure wifi, either the original emustation TUI or a localhost API with web UI.
 - [x] Do a basic Nostr receive to get a game on there.
