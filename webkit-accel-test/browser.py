@@ -9,6 +9,15 @@ os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 # Disable sandbox so the renderer process can read /dev/input/event*
 os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
 
+# Configure Chromium audio latency and disable throttling
+chromium_flags = [
+    "--audio-buffer-size=512",
+    "--disable-audio-output-resampler",
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+]
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = " ".join(chromium_flags)
+
 import re
 import json
 import socket
