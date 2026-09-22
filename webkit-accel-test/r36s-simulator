@@ -9,12 +9,11 @@ Opens a Chromium window at 720x720 (R36S resolution) with:
 
 Keyboard mappings (standard W3C gamepad layout):
   Arrow Keys / WASD    D-Pad / Left Stick
-  Z / X                B / A buttons
-  Space                A button
+  Z / Escape           B button
+  X / Space / Enter    A button
   C / V                Y / X buttons
-  Enter                Start
-  Backspace            Select
-  Escape               Special
+  . / Backspace        Select
+  ,                    Start
   Q/E                  L1/R1
   1/3                  L2/R2
   R/T                  L3 (stick click) / R3
@@ -61,17 +60,18 @@ SHIM_SCRIPT = r"""
       12 D-Pad Up      13 D-Pad Down     14 D-Pad Left   15 D-Pad Right
       16 Special */
     var keyMap = {
-        'ArrowUp':    12,   'w': 12,
-        'ArrowDown':  13,   's': 13,
-        'ArrowLeft':  14,   'a': 14,
-        'ArrowRight': 15,   'd': 15,
-        'W': 12, 'S': 13, 'A': 14, 'D': 15,
-        'z':  0,  'x':  1,  'c':  2,  'v':  3,
-        ' ':  1,
-        'q':  4,  'e':  5,  '1':  6,  '3':  7,
-        'Enter':     9,  'Backspace': 8,
-        'Escape':   16,
-        'r': 10,  't': 11
+        'ArrowUp':    12,   'w': 12,   'W': 12,
+        'ArrowDown':  13,   's': 13,   'S': 13,
+        'ArrowLeft':  14,   'a': 14,   'A': 14,
+        'ArrowRight': 15,   'd': 15,   'D': 15,
+        'z':  0,  'Escape':    0,
+        'x':  1,  ' ':         1,  'Enter': 1,
+        'c':  2,  'v':         3,
+        '.':  8,  'Backspace': 8,
+        ',':  9,
+        'q':  4,  'e':         5,
+        '1':  6,  '3':         7,
+        'r': 10,  't':        11
     };
 
     function setBtn(idx, pressed) {
@@ -243,13 +243,14 @@ def main():
     print('')
     print('Keyboard mappings:')
     print('  Arrow Keys / WASD     D-Pad / Left Stick')
-    print('  Z / X / Space         B / A')
+    print('  Z / Escape            B button')
+    print('  X / Space / Enter     A button')
     print('  C / V                 Y / X')
-    print('  Q / E                  L1 / R1')
-    print('  1 / 3                  L2 / R2')
-    print('  Enter / Backspace      Start / Select')
-    print('  R / T                  L3 / R3')
-    print('  Escape                Special')
+    print('  . / ,                 Select / Start')
+    print('  Backspace             Select')
+    print('  Q / E                 L1 / R1')
+    print('  1 / 3                 L2 / R2')
+    print('  R / T                 L3 / R3')
     print('')
     print('DevTools should open automatically.')
     print('Close the window to stop the server.')
