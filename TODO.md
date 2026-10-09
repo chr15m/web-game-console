@@ -1,5 +1,3 @@
-- [ ] Game loader design fixes to match new homepage
-
 - [ ] Work through high-priority items in `performance-tuning.md`:
   - [ ] Set CPU & GPU governors to 'performance' on boot
   - [ ] Add Nice=-10 and LimitRTPRIO=99 to web-console.service
@@ -40,6 +38,8 @@
 - [ ] Test WebAssembly (Wasm) support and document limitations (Chromium 69).
 
 # Done
+
+- [x] Game loader design fixes to match new homepage
 
 - [x] Audio is laggy - reduce buffer size (tested 256 vs 512 samples)
 
