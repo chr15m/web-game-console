@@ -85,6 +85,7 @@
             position: relative;
             z-index: 2;
             width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -92,26 +93,37 @@
         }
 
         .title-wrapper {
-            margin-top: 36px;
-            margin-bottom: 24px;
+            margin-top: 40px;
+            margin-bottom: 28px;
             position: relative;
             display: inline-block;
         }
 
         .styled-title {
-            font-family: 'Luckiest Guy', cursive, sans-serif;
-            font-size: 52px;
-            letter-spacing: 4px;
-            color: #F02828;
+            position: relative;
+            font-family: 'Comic Mono', monospace;
+            font-weight: bold;
+            text-transform: lowercase;
+            color: #212123;
             -webkit-text-stroke: 10px #212123;
-            paint-order: stroke fill;
-            text-shadow:
-                0 4px 0 #212123,
-                0 7px 0 #212123,
-                0 10px 0 #212123;
-            filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.2));
+            font-size: 52px;
+            letter-spacing: 2px;
             user-select: none;
             margin: 0;
+            filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.22));
+            line-height: 1.1;
+            padding: 4px 0;
+        }
+
+        .styled-title::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 100%;
+            color: #E5A50A;
+            -webkit-text-stroke: 0;
+            pointer-events: none;
         }
 
         .styled-title .spinner {
@@ -121,19 +133,44 @@
             height: 30px;
         }
 
+        #grid-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: -20px;
+        }
+
         #grid-container {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
-            width: 680px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
             margin: 0 auto;
+        }
+
+        .grid-row, .match-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        #picker-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: -20px;
         }
 
         #picker-container {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-            width: 360px;
+            gap: 16px;
             margin: 10px auto;
         }
 
@@ -175,8 +212,8 @@
         }
 
         #match-container {
-            margin-top: 24px;
-            padding: 16px 20px;
+            margin-top: 20px;
+            padding: 14px 20px;
             border: 4px solid #212123;
             border-radius: 14px;
             display: flex;
@@ -199,28 +236,29 @@
         .match-heading {
             font-family: 'Comic Mono', monospace;
             font-weight: bold;
-            font-size: 1.2em;
+            font-size: 1.1em;
             color: #ddd;
-            margin: 0 0 12px 0;
+            margin: 0 0 10px 0;
             text-transform: lowercase;
         }
 
         #match-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
 
         .match-cell {
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             background: #212123;
             border: 2px solid #4D4756;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6em;
+            font-size: 1.5em;
         }
 
         .match-prompt {
@@ -328,14 +366,18 @@
         <div id="doodles-layer" class="doodles-background"></div>
         <div id="gamecode-screen">
             <div class="title-wrapper">
-                <h1 id="gamecode-title" class="styled-title">Enter Game Code</h1>
+                <h1 id="gamecode-title" class="styled-title" data-text="enter game code">enter game code</h1>
             </div>
-            <div id="grid-container"></div>
-            <div id="picker-container" class="hidden"></div>
-            <div id="match-container" class="hidden">
-                <div class="match-heading">matching game found</div>
-                <div id="match-grid"></div>
-                <div class="match-prompt">press a/x to play</div>
+            <div id="grid-wrapper">
+                <div id="grid-container"></div>
+                <div id="match-container" class="hidden">
+                    <div class="match-heading">matching game found</div>
+                    <div id="match-grid"></div>
+                    <div class="match-prompt">press a/x to play</div>
+                </div>
+            </div>
+            <div id="picker-wrapper" class="hidden">
+                <div id="picker-container"></div>
             </div>
         </div>
     </div>
@@ -346,6 +388,23 @@
         document.body.focus();
 
         const SYMBOLS = ['🌟', '🍄', '🔥', '💧', '💎', '🍌', '🍎', '🍀', '👻', '💀', '👽', '🤖', '💣', '🔔', '💙', '🌙'];
+        const ROW_LENGTHS = [5, 5, 6];
+        const ROW_STARTS = [0, 5, 10];
+
+        function setTitle(text, html) {
+            const el = document.getElementById('gamecode-title');
+            if (html !== undefined) {
+                el.innerHTML = html;
+            } else {
+                el.textContent = text;
+            }
+            el.setAttribute('data-text', text);
+        }
+
+        function getCellIndex(x, y) {
+            return ROW_STARTS[y] + x;
+        }
+
         let currentScreen = 'gamecode'; // gamecode, picker, playing
         
         // Grid state
@@ -382,7 +441,7 @@
         function fetchGame(wgc5) {
             if (fetching) return;
             fetching = true;
-            document.getElementById('gamecode-title').innerHTML = "Searching... <div class='spinner'></div>";
+            setTitle("searching...", "searching... <div class='spinner'></div>");
             
             if (ws) ws.close();
             ws = new WebSocket('wss://relay.mccormick.cx');
@@ -406,16 +465,16 @@
                             
                             mockMatchData = fullCodeEmojis.map(emoji => SYMBOLS.indexOf(emoji));
                             gamecodeFocus = 'match';
-                            document.getElementById('gamecode-title').textContent = "Game Found!";
+                            setTitle("game found!");
                             updateGridUI();
                         }
                         ws.close();
                     } else if (data[0] === "EOSE") {
                         if (!fetchedEvent) {
-                            document.getElementById('gamecode-title').textContent = "Not Found";
+                            setTitle("not found");
                             setTimeout(() => {
                                 if (currentScreen === 'gamecode' && !fetchedEvent) {
-                                    document.getElementById('gamecode-title').textContent = "Enter Game Code";
+                                    setTitle("enter game code");
                                     gridData.fill(-1);
                                     gridCursor = {x:0, y:0};
                                     updateGridUI();
@@ -432,12 +491,12 @@
             ws.onclose = () => { fetching = false; };
             ws.onerror = () => { 
                 fetching = false; 
-                document.getElementById('gamecode-title').textContent = "Network Error";
+                setTitle("network error");
             };
         }
 
         async function launchGame(base64Zip) {
-            document.getElementById('gamecode-title').innerHTML = "Loading... <div class='spinner'></div>";
+            setTitle("loading...", "loading... <div class='spinner'></div>");
             try {
                 const zip = new JSZip();
                 await zip.loadAsync(base64Zip, {base64: true});
@@ -463,20 +522,27 @@
                 currentScreen = 'playing';
             } catch (err) {
                 console.error(err);
-                document.getElementById('gamecode-title').textContent = "Error Loading Game";
+                setTitle("error loading game");
             }
         }
 
         function initGrid() {
             const container = document.getElementById('grid-container');
             if (container.children.length === 0) {
-                for (let i = 0; i < 16; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    if (i < 5) cell.classList.add('highlight');
-                    cell.id = `cell-${i}`;
-                    container.appendChild(cell);
-                }
+                let cellIdx = 0;
+                ROW_LENGTHS.forEach((len, rowIdx) => {
+                    const row = document.createElement('div');
+                    row.className = 'grid-row';
+                    for (let c = 0; c < len; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        if (cellIdx < 5) cell.classList.add('highlight');
+                        cell.id = `cell-${cellIdx}`;
+                        row.appendChild(cell);
+                        cellIdx++;
+                    }
+                    container.appendChild(row);
+                });
             }
             const pContainer = document.getElementById('picker-container');
             if (pContainer.children.length === 0) {
@@ -493,11 +559,11 @@
 
         function updateGridUI() {
             const isPicker = currentScreen === 'picker';
-            document.getElementById('grid-container').classList.toggle('hidden', isPicker);
-            document.getElementById('picker-container').classList.toggle('hidden', !isPicker);
+            document.getElementById('grid-wrapper').classList.toggle('hidden', isPicker);
+            document.getElementById('picker-wrapper').classList.toggle('hidden', !isPicker);
             
             if (!fetching && !fetchedEvent) {
-                document.getElementById('gamecode-title').textContent = isPicker ? "Select Symbol" : "Enter Game Code";
+                setTitle(isPicker ? "select symbol" : "enter game code");
             }
 
             let first5Filled = true;
@@ -520,24 +586,34 @@
                 matchContainer.classList.toggle('active', gamecodeFocus === 'match');
                 const matchGrid = document.getElementById('match-grid');
                 if (matchGrid.children.length === 0) {
-                    for (let i = 0; i < 16; i++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'match-cell';
-                        matchGrid.appendChild(cell);
-                    }
+                    let mIdx = 0;
+                    ROW_LENGTHS.forEach(len => {
+                        const row = document.createElement('div');
+                        row.className = 'match-row';
+                        for (let c = 0; c < len; c++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'match-cell';
+                            cell.id = `match-cell-${mIdx}`;
+                            row.appendChild(cell);
+                            mIdx++;
+                        }
+                        matchGrid.appendChild(row);
+                    });
                 }
                 for (let i = 0; i < 16; i++) {
-                    matchGrid.children[i].textContent = SYMBOLS[mockMatchData[i]];
+                    const mCell = document.getElementById(`match-cell-${i}`);
+                    if (mCell) mCell.textContent = SYMBOLS[mockMatchData[i]];
                 }
             } else {
                 matchContainer.classList.add('hidden');
             }
 
+            const currentCellIndex = getCellIndex(gridCursor.x, gridCursor.y);
             for (let i = 0; i < 16; i++) {
                 const cell = document.getElementById(`cell-${i}`);
                 if (cell) {
                     cell.textContent = gridData[i] === -1 ? '' : SYMBOLS[gridData[i]];
-                    cell.classList.toggle('active', !isPicker && gamecodeFocus === 'grid' && i === (gridCursor.y * 8 + gridCursor.x));
+                    cell.classList.toggle('active', !isPicker && gamecodeFocus === 'grid' && i === currentCellIndex);
                 }
             }
             for (let i = 0; i < 16; i++) {
@@ -566,12 +642,21 @@
             }
             if (currentScreen === 'picker') {
                 const symbolIdx = pickerCursor.y * 4 + pickerCursor.x;
-                const gridIdx = gridCursor.y * 8 + gridCursor.x;
+                const gridIdx = getCellIndex(gridCursor.x, gridCursor.y);
                 gridData[gridIdx] = symbolIdx;
                 
                 if (gridIdx < 15) {
-                    gridCursor.x = (gridIdx + 1) % 8;
-                    gridCursor.y = Math.floor((gridIdx + 1) / 8);
+                    const nextIdx = gridIdx + 1;
+                    if (nextIdx < 5) {
+                        gridCursor.y = 0;
+                        gridCursor.x = nextIdx;
+                    } else if (nextIdx < 10) {
+                        gridCursor.y = 1;
+                        gridCursor.x = nextIdx - 5;
+                    } else {
+                        gridCursor.y = 2;
+                        gridCursor.x = nextIdx - 10;
+                    }
                 }
                 switchToScreen('gamecode');
                 return;
@@ -596,9 +681,14 @@
                 if (currentScreen === 'gamecode') {
                     if (gamecodeFocus === 'match') {
                         gamecodeFocus = 'grid';
-                        gridCursor.y = 1;
+                        gridCursor.y = 2;
+                        if (gridCursor.x >= ROW_LENGTHS[2]) gridCursor.x = ROW_LENGTHS[2] - 1;
                     } else if (gamecodeFocus === 'grid') {
-                        if (gridCursor.y === 1) gridCursor.y = 0;
+                        if (gridCursor.y > 0) {
+                            gridCursor.y--;
+                            const maxRowX = ROW_LENGTHS[gridCursor.y] - 1;
+                            if (gridCursor.x > maxRowX) gridCursor.x = maxRowX;
+                        }
                     }
                     updateGridUI();
                 } else if (currentScreen === 'picker') {
@@ -609,9 +699,11 @@
             onDown: () => {
                 if (currentScreen === 'gamecode') {
                     if (gamecodeFocus === 'grid') {
-                        if (gridCursor.y === 0) {
-                            gridCursor.y = 1;
-                        } else if (gridCursor.y === 1 && mockMatchData) {
+                        if (gridCursor.y < 2) {
+                            gridCursor.y++;
+                            const maxRowX = ROW_LENGTHS[gridCursor.y] - 1;
+                            if (gridCursor.x > maxRowX) gridCursor.x = maxRowX;
+                        } else if (gridCursor.y === 2 && mockMatchData) {
                             gamecodeFocus = 'match';
                         }
                     }
@@ -623,7 +715,8 @@
             },
             onLeft: () => {
                 if (currentScreen === 'gamecode' && gamecodeFocus === 'grid') {
-                    gridCursor.x = (gridCursor.x - 1 + 8) % 8;
+                    const rowLen = ROW_LENGTHS[gridCursor.y];
+                    gridCursor.x = (gridCursor.x - 1 + rowLen) % rowLen;
                     updateGridUI();
                 } else if (currentScreen === 'picker') {
                     pickerCursor.x = (pickerCursor.x - 1 + 4) % 4;
@@ -632,7 +725,8 @@
             },
             onRight: () => {
                 if (currentScreen === 'gamecode' && gamecodeFocus === 'grid') {
-                    gridCursor.x = (gridCursor.x + 1) % 8;
+                    const rowLen = ROW_LENGTHS[gridCursor.y];
+                    gridCursor.x = (gridCursor.x + 1) % rowLen;
                     updateGridUI();
                 } else if (currentScreen === 'picker') {
                     pickerCursor.x = (pickerCursor.x + 1) % 4;
