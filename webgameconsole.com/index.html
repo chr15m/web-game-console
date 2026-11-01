@@ -210,7 +210,11 @@
       lastTime = timestamp;
 
       if (!isDragging && loadedCount === TOTAL_FRAMES) {
-        accumulatedTime += delta;
+        // Crossover points are frame 0 and midway (frame 60)
+        // Peak (2x) at 0 and 60, min (0.5x) at 30 and 90
+        const angle = (currentFrame / TOTAL_FRAMES) * Math.PI * 4;
+        const speedMult = 1.25 + 0.75 * Math.cos(angle); // ranges smoothly from 0.5x to 2.0x
+        accumulatedTime += delta * speedMult;
         const frameStep = 1 / AUTO_FPS;
         while (accumulatedTime >= frameStep) {
           currentFrame = (currentFrame + 1) % TOTAL_FRAMES;
