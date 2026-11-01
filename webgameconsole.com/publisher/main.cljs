@@ -204,9 +204,17 @@
   (let [{:keys [npub history show-modal?]} @state]
     [:div#app
      [:header.spread
-      [:div.clickable
-       [:svg.logo-icon [:use {:href "#icon-sun"}]]
-       [:strong " web game console"]]
+      [:a.header-brand {:href "../"}
+       [:svg.wgc-logo {:viewBox "0 0 220 100" :xmlns "http://www.w3.org/2000/svg"}
+        [:defs
+         [:g {:id "wgc-text"}
+          [:text.title-text {:font-family "'Luckiest Guy', cursive, sans-serif"
+                             :x "12" :y "52"} "WGC"]]]
+        [:use {:href "#wgc-text" :transform "translate(0, 10)" :class "extrude"}]
+        [:use {:href "#wgc-text" :transform "translate(0, 7.5)" :class "extrude"}]
+        [:use {:href "#wgc-text" :transform "translate(0, 5)" :class "extrude"}]
+        [:use {:href "#wgc-text" :transform "translate(0, 2.5)" :class "extrude"}]
+        [:use {:href "#wgc-text" :class "front"}]]]
       [:nav
        [:action-buttons
         [:span {:style {:font-size "0.8em" :color "var(--shade)"}} 

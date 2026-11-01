@@ -11,17 +11,40 @@
     <script src="https://cdn.jsdelivr.net/npm/scittle@latest/dist/scittle.reagent.min.js" type="application/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/nostr-tools@2.17.2/lib/nostr.bundle.min.js"></script>
     <style>
+        @font-face {
+          font-family: 'Luckiest Guy';
+          src: url('../LuckiestGuy-Regular.ttf') format('truetype');
+          font-weight: normal;
+          font-style: normal;
+        }
+        @font-face {
+          font-family: 'Comic Mono';
+          src: url('../ComicMono.ttf') format('truetype');
+          font-weight: normal;
+          font-style: normal;
+        }
+        @font-face {
+          font-family: 'Comic Mono';
+          src: url('../ComicMono-Bold.ttf') format('truetype');
+          font-weight: bold;
+          font-style: normal;
+        }
+
         :root {
-          --fg: #e8e4d8;
-          --bg: #161616;
-          --shade: #889;
+          --fg: #f0ede6;
+          --bg: #000000;
+          --panel-bg: #141416;
+          --shade: #727782;
+          --accent: #E5A50A;
+          --brand-red: #F02828;
+          --border: #212123;
           --error-bg: #782828;
-          --radius: 4px;
+          --radius: 6px;
           --content-width: 800px;
         }
 
         html {
-          font-size: 1.25rem;
+          font-size: 1.15rem;
           box-sizing: border-box;
           height: 100%;
         }
@@ -34,7 +57,7 @@
           margin: 0;
           background: var(--bg);
           color: var(--fg);
-          font-family: Helvetica, Arial, sans-serif;
+          font-family: 'Comic Mono', monospace;
           padding: 1em;
           height: 100%;
         }
@@ -54,13 +77,6 @@
 
         a { color: var(--fg); }
 
-        .logo-icon {
-          vertical-align: middle;
-          display: inline-block;
-          width: 24px;
-          height: 24px;
-        }
-
         body header, body main, body footer {
           margin: 0px auto;
           padding-left: 10px;
@@ -76,40 +92,94 @@
 
         body > header {
           padding-top: 1rem;
-          padding-bottom: 1rem;
-          font-size: 1.2em;
+          padding-bottom: 1.5rem;
         }
 
-        h2 { font-size: 1.5em; }
-        h3 { font-size: 1.17em; }
+        .header-brand {
+          display: inline-flex;
+          text-decoration: none;
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+
+        .header-brand:hover {
+          transform: scale(1.05);
+        }
+
+        .wgc-logo {
+          width: 105px;
+          height: 52px;
+          overflow: visible;
+          filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.6))
+                  drop-shadow(0 0 30px rgba(255, 255, 255, 0.35))
+                  drop-shadow(0 0 60px rgba(255, 255, 255, 0.2));
+        }
+
+        .title-text {
+          font-family: 'Luckiest Guy', cursive, sans-serif;
+          font-size: 64px;
+          letter-spacing: 4px;
+          stroke-width: 16px;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          paint-order: stroke fill;
+          dominant-baseline: middle;
+          text-anchor: start;
+        }
+
+        .extrude {
+          fill: #212123;
+          stroke: #212123;
+        }
+
+        .front {
+          fill: #F02828;
+          stroke: #212123;
+        }
+
+        h2, h3 {
+          font-family: 'Luckiest Guy', cursive, sans-serif;
+          letter-spacing: 1px;
+          color: var(--fg);
+        }
+
+        h2 { font-size: 1.6em; margin-bottom: 1rem; }
+        h3 { font-size: 1.3em; }
 
         button {
           display: inline-block;
           vertical-align: middle;
-          padding: .2rem .5rem;
-          font-size: 1rem;
+          padding: .4rem .8rem;
+          font-family: 'Comic Mono', monospace;
+          font-weight: bold;
+          font-size: 0.95rem;
+          text-transform: lowercase;
           margin-bottom: .5rem;
-          background: var(--fg);
-          color: var(--bg);
-          border: .1rem solid var(--fg);
+          background: var(--accent);
+          color: #111;
+          border: 2px solid var(--border);
           border-radius: var(--radius);
           cursor: pointer;
+          transition: transform 0.1s ease, opacity 0.1s ease;
         }
 
         button:hover {
-          opacity: 0.9;
+          opacity: 0.92;
+          transform: scale(1.02);
         }
 
         button[type="reset"] {
           background: transparent;
           color: var(--fg);
+          border-color: var(--shade);
         }
 
         button:disabled {
           cursor: not-allowed; 
-          background: var(--shade);
-          border: 2px solid var(--shade);
-          color: var(--bg);
+          background: var(--border);
+          border: 2px solid var(--border);
+          color: var(--shade);
+          transform: none;
         }
 
         label {
@@ -122,10 +192,11 @@
           box-sizing: inherit;
           padding: .5rem .5rem;
           width: 100%;
-          font-size: 1rem;
+          font-family: 'Comic Mono', monospace;
+          font-size: 0.95rem;
           color: var(--fg);
-          background-color: var(--bg);
-          border: .1rem solid var(--fg);
+          background-color: var(--panel-bg);
+          border: 2px solid var(--border);
           border-radius: var(--radius);
           margin-bottom: .8rem;
         }
@@ -133,16 +204,27 @@
         table {
           width: 100%;
           border-spacing: 0;
+          background: var(--panel-bg);
+          border: 2px solid var(--border);
+          border-radius: var(--radius);
+          overflow: hidden;
         }
 
-        td, th { padding: .4rem; }
-        th { border-bottom: .1rem solid var(--fg); text-align: left; }
-        td { border-bottom: .05rem solid var(--fg); }
+        td, th { padding: .75rem 1rem; }
+        th {
+          border-bottom: 2px solid var(--border);
+          color: var(--accent);
+          font-weight: bold;
+          text-align: left;
+        }
+        td { border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
 
         .spread {
           width: 100%;
           display: flex;
           justify-content: space-between;
+          align-items: center;
         }
 
         action-buttons {
@@ -156,38 +238,53 @@
           display: block;
           width: 24px;
           height: 24px;
+          color: var(--shade);
         }
 
-        .icon-sm { width: 20px; height: 20px; }
+        .icon-sm { width: 18px; height: 18px; display: block; }
 
         .error {
           background-color: var(--error-bg);
           padding: 0.5em 1em;
           border-radius: var(--radius);
+          font-size: 0.9rem;
         }
 
         .clickable { cursor: pointer; }
 
         dialog {
-          background: var(--bg);
+          background: var(--panel-bg);
           color: var(--fg);
-          border: .1rem solid var(--fg);
+          border: 2px solid var(--accent);
           border-radius: var(--radius);
           padding: 1.5em;
-          max-width: 400px;
+          max-width: 440px;
+          width: 90%;
           position: fixed;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
           margin: 0;
+          box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
         }
 
         .dialog-actions {
-          text-align: right;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
           margin-top: 1.5em;
         }
 
-        .game-code-display { font-size: 2rem; letter-spacing: 4px; background: #000; padding: 1rem; text-align: center; border-radius: var(--radius); margin: 1rem 0; }
+        .game-code-display {
+          font-size: 1.8rem;
+          letter-spacing: 4px;
+          background: #000;
+          border: 2px solid var(--border);
+          padding: 1rem;
+          text-align: center;
+          border-radius: var(--radius);
+          margin: 1rem 0;
+        }
 
         [data-notification-text] {
           position: relative;
@@ -199,8 +296,9 @@
           bottom: 100%;
           left: 50%;
           transform: translateX(-50%);
-          background-color: rgba(255,255,255,0.9);
+          background-color: var(--accent);
           color: #000;
+          font-weight: bold;
           padding: 0.2rem 0.5rem;
           font-size: 0.8rem;
           border-radius: var(--radius);
@@ -210,21 +308,26 @@
         }
 
         .history-table td { vertical-align: middle; }
-        .plus-btn-container { text-align: right; margin-top: 2rem; }
-        .plus-btn { font-size: 1.5rem; padding: 0.5rem 1.5rem; border-radius: var(--radius); line-height: 1; }
+        .plus-btn-container { text-align: right; margin-top: 1.5rem; }
+        .plus-btn {
+          font-size: 1.5rem;
+          padding: 0.4rem 1.2rem;
+          border-radius: var(--radius);
+          line-height: 1;
+        }
         .copyable { cursor: pointer; }
-        .copyable:hover { text-decoration: underline; }
+        .copyable:hover { opacity: 0.85; }
         
         .formatted-code { display: inline-block; }
         .code-highlight {
-          background: #131;
-          border: 1px solid #0a0;
-          padding: 0.1em 0.2em;
+          background: rgba(229, 165, 10, 0.15);
+          border: 1px solid var(--accent);
+          padding: 0.1em 0.3em;
           border-radius: var(--radius);
           margin-right: 0.3em;
         }
         .code-rest {
-          opacity: 0.6;
+          opacity: 0.65;
         }
     </style>
     <script type="application/x-scittle" src="main.cljs"></script>
