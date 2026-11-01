@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>3D Console Viewer</title>
   <style>
+    @font-face {
+      font-family: 'Luckiest Guy';
+      src: url('LuckiestGuy-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Comic Mono';
+      src: url('ComicMono.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Comic Mono';
+      src: url('ComicMono-Bold.ttf') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
     * {
       box-sizing: border-box;
       margin: 0;
@@ -41,9 +59,99 @@
       pointer-events: none;
       transition: opacity 0.3s;
     }
+    .wgc-logo {
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      width: 105px;
+      height: 52px;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 10;
+      filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.6))
+              drop-shadow(0 0 30px rgba(255, 255, 255, 0.35))
+              drop-shadow(0 0 60px rgba(255, 255, 255, 0.2));
+    }
+    .title-text {
+      font-family: 'Luckiest Guy', cursive, sans-serif;
+      font-size: 64px;
+      letter-spacing: 4px;
+      stroke-width: 16px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      paint-order: stroke fill;
+      dominant-baseline: middle;
+      text-anchor: start;
+    }
+    .extrude {
+      fill: #212123;
+      stroke: #212123;
+    }
+    .front {
+      fill: #F02828;
+      stroke: #212123;
+    }
+    .publish-link {
+      position: absolute;
+      top: 32px;
+      right: 36px;
+      font-family: 'Comic Mono', monospace;
+      font-weight: bold;
+      font-size: 20px;
+      color: #E5A50A;
+      text-decoration: none;
+      text-transform: lowercase;
+      letter-spacing: 1px;
+      z-index: 10;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .publish-link:hover {
+      opacity: 0.85;
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
+  <svg class="wgc-logo" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        @font-face {
+          font-family: 'Luckiest Guy';
+          src: url('LuckiestGuy-Regular.ttf') format('truetype');
+        }
+        .title-text {
+          font-family: 'Luckiest Guy', cursive, sans-serif;
+          font-size: 64px;
+          letter-spacing: 4px;
+          stroke-width: 16px;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          paint-order: stroke fill;
+          dominant-baseline: middle;
+          text-anchor: start;
+        }
+        .extrude {
+          fill: #212123;
+          stroke: #212123;
+        }
+        .front {
+          fill: #F02828;
+          stroke: #212123;
+        }
+      </style>
+      <g id="wgc-text">
+        <text class="title-text" font-family="'Luckiest Guy', cursive, sans-serif" x="12" y="52">WGC</text>
+      </g>
+    </defs>
+    <use href="#wgc-text" transform="translate(0, 10)" class="extrude" />
+    <use href="#wgc-text" transform="translate(0, 7.5)" class="extrude" />
+    <use href="#wgc-text" transform="translate(0, 5)" class="extrude" />
+    <use href="#wgc-text" transform="translate(0, 2.5)" class="extrude" />
+    <use href="#wgc-text" class="front" />
+  </svg>
+  <a href="publisher/" class="publish-link">publish</a>
   <div id="loading">Loading 0%</div>
   <canvas id="view" width="1280" height="720"></canvas>
 
@@ -71,11 +179,6 @@
       if (img && img.complete && img.naturalWidth > 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        ctx.font = '24px monospace';
-        ctx.fillStyle = '#00ff66';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(`Frame ${frameIdx + 1} / ${TOTAL_FRAMES}`, canvas.width - 24, canvas.height - 20);
       }
     }
 
