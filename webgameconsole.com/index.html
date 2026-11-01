@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D Console Viewer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      cursor: grab;
+    }
+    body:active {
+      cursor: grabbing;
+    }
+    canvas {
+      display: block;
+      max-width: 100vw;
+      max-height: 100vh;
+      object-fit: contain;
+    }
+    #loading {
+      position: absolute;
+      color: #888;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading 0%</div>
+  <canvas id="view" width="1280" height="720"></canvas>
+
+  <script>
+    const TOTAL_FRAMES = 134;
+    const PIXELS_PER_FRAME = 8;
+    const AUTO_FPS = 24;
+
+    const canvas = document.getElementById('view');
+    const ctx = canvas.getContext('2d');
+    const loadingEl = document.getElementById('loading');
+
+    const frames = [];
+    let loadedCount = 0;
+    let currentFrame = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let frameAtDragStart = 0;
+    let lastTime = 0;
+    let accumulatedTime = 0;
+
+    function render() {
+      const frameIdx = Math.floor(currentFrame) % TOTAL_FRAMES;
+      const img = frames[frameIdx];
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.font = '24px monospace';
+        ctx.fillStyle = '#00ff66';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`Frame ${frameIdx + 1} / ${TOTAL_FRAMES}`, canvas.width - 24, canvas.height - 20);
+      }
+    }
+
+    function animate(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      if (!isDragging && loadedCount === TOTAL_FRAMES) {
+        accumulatedTime += delta;
+        const frameStep = 1 / AUTO_FPS;
+        while (accumulatedTime >= frameStep) {
+          currentFrame = (currentFrame + 1) % TOTAL_FRAMES;
+          accumulatedTime -= frameStep;
+        }
+        render();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function onPointerDown(e) {
+      isDragging = true;
+      dragStartX = e.clientX ?? (e.touches && e.touches[0].clientX) ?? 0;
+      frameAtDragStart = currentFrame;
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      const clientX = e.clientX ?? (e.touches && e.touches[0].clientX) ?? 0;
+      const dx = clientX - dragStartX;
+      const frameDelta = -dx / PIXELS_PER_FRAME;
+      currentFrame = ((frameAtDragStart + frameDelta) % TOTAL_FRAMES + TOTAL_FRAMES) % TOTAL_FRAMES;
+      render();
+    }
+
+    function onPointerUp() {
+      isDragging = false;
+      accumulatedTime = 0;
+    }
+
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    window.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp, { passive: true });
+    window.addEventListener('touchcancel', onPointerUp, { passive: true });
+
+    for (let i = 1; i <= TOTAL_FRAMES; i++) {
+      const img = new Image();
+      const numStr = String(i).padStart(4, '0');
+      img.src = `3d-console/frame_${numStr}.jpg`;
+      img.onload = () => {
+        loadedCount++;
+        loadingEl.textContent = `Loading ${Math.round((loadedCount / TOTAL_FRAMES) * 100)}%`;
+        if (loadedCount === 1) render();
+        if (loadedCount === TOTAL_FRAMES) {
+          loadingEl.style.opacity = '0';
+          setTimeout(() => loadingEl.remove(), 300);
+        }
+      };
+      frames.push(img);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
